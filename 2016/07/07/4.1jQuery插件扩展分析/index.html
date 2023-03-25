@@ -1,0 +1,649 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>jQuery插件扩展分析 | DukeZeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="竹林闲人">
+    
+
+    
+    <meta name="description" content="jQuery对象简介在源码中看到jQuery对象其实就是第一个函数表达式，这个函数里面什么都没有干，直接返回了一个init实例化的对象，由于init的原型对象引用指向的就是jQuery，所以这个对象实际就是jQuery的实例。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="jQuery插件扩展分析">
+<meta property="og:url" content="http://zeng233.github.io/2016/07/07/4.1jQuery%E6%8F%92%E4%BB%B6%E6%89%A9%E5%B1%95%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="DukeZeng">
+<meta property="og:description" content="jQuery对象简介在源码中看到jQuery对象其实就是第一个函数表达式，这个函数里面什么都没有干，直接返回了一个init实例化的对象，由于init的原型对象引用指向的就是jQuery，所以这个对象实际就是jQuery的实例。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://zeng233.github.io/images/web/jQuery/12-1.png">
+<meta property="article:published_time" content="2016-07-07T12:57:49.000Z">
+<meta property="article:modified_time" content="2016-07-07T12:57:34.000Z">
+<meta property="article:author" content="竹林闲人">
+<meta property="article:tag" content="jQuery">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zeng233.github.io/images/web/jQuery/12-1.png">
+<meta name="twitter:creator" content="@zeng233">
+<link rel="publisher" href="106512881304692844041">
+
+    
+    <link rel="alternative" href="/atom.xml" title="DukeZeng" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/duke.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/%02.css">
+<link rel="stylesheet" href="/.css">
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="DukeZeng">DukeZeng</a></h1>
+				<h2 class="blog-motto">竹林闲人的博客</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于我</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:zeng233.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/07/07/4.1jQuery插件扩展分析/" title="jQuery插件扩展分析" itemprop="url">jQuery插件扩展分析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
+		
+  <p class="article-time">
+    <time datetime="2016-07-07T12:57:49.000Z" itemprop="datePublished"> 发表于 2016-07-07</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#jQuery对象简介"><span class="toc-number">1.</span> <span class="toc-text">jQuery对象简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#jQuery两种添加插件方式"><span class="toc-number">2.</span> <span class="toc-text">jQuery两种添加插件方式</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#extend方式添加插件"><span class="toc-number">2.1.</span> <span class="toc-text">$.extend方式添加插件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#fn-extend方式添加插件"><span class="toc-number">2.2.</span> <span class="toc-text">$.fn.extend方式添加插件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#自定义插件标准"><span class="toc-number">2.3.</span> <span class="toc-text">自定义插件标准</span></a></li></ol></li></ol>
+		
+		</div>
+		
+		<h1 id="jQuery对象简介"><a href="#jQuery对象简介" class="headerlink" title="jQuery对象简介"></a>jQuery对象简介</h1><p>在源码中看到jQuery对象其实就是第一个函数表达式，这个函数里面什么都没有干，直接返回了一个init实例化的对象，由于init的原型对象引用指向的就是jQuery，所以这个对象实际就是jQuery的实例。</p>
+<a id="more"></a>
+<!-- --- -->
+
+
+<pre><code>jQuery = function( selector, context ) {
+    //创建jQuery实例
+    // The jQuery object is actually just the init constructor &apos;enhanced&apos;
+    // Need init if jQuery is called (just allow error to be thrown if not included)
+    return new jQuery.fn.init( selector, context );
+},
+
+...
+//jQuery的原型引用传递给jQuery.fn
+jQuery.fn = jQuery.prototype
+...
+// Give the init function the jQuery prototype for later instantiation
+//将jQuery原型引用传递给init
+init.prototype = jQuery.fn;</code></pre><p>经过两次引用传递，init对象就具有jQuery对象的功能了，各个原型之间的关系参考下图：</p>
+<p><img src="/images/web/jQuery/12-1.png" alt></p>
+<p>JavaScript的原型分析可以参考前面的<a href="http://zeng233.github.io/2016/07/06/5.1%E7%90%86%E8%A7%A3JavaScript%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F/">《理解JavaScript原型模式》</a>。<br>将jquery.js引入文档之后，执行jQuery匿名函数的时候传递了window对象，把jQuery与$变量赋值给window，所以这两者通用的，都表示jQuery的实例化对象。我们代码里面就可以用jQuery.ajax()，jQuery.each()等原型中的方法了。</p>
+<h1 id="jQuery两种添加插件方式"><a href="#jQuery两种添加插件方式" class="headerlink" title="jQuery两种添加插件方式"></a>jQuery两种添加插件方式</h1><p>jQuery里面有两种扩展可以实现自己的插件，一种是$.extend，另一种就是$.fn.extend，源代码里面它们其实指向同一个函数：</p>
+<pre><code>jQuery.extend = jQuery.fn.extend = function() {
+    var src, copyIsArray, copy, name, options, clone,
+    target = arguments[0] || {},//返回的目标对象
+    i = 1,
+    length = arguments.length,
+    deep = false;
+    ......
+}</code></pre><p>从前面的分析大概就明白这两者的区别了，$.extend表示第一次加载进来的实例就添加一个extend函数，而$.fn.extend表示jQuery原型对象上面添加一个extend函数，所以在$.extend里面添加扩展函数可以直接用$.函数名()直接使用，而$.fn.extend需要执行$(选择器).函数名()实例化之后才可以调用扩展函数。可以简单的理解为，$.extend为jQuery全局对象添加方法，$.fn.extend为jQuery实例化添加方法。</p>
+<h2 id="extend方式添加插件"><a href="#extend方式添加插件" class="headerlink" title="$.extend方式添加插件"></a>$.extend方式添加插件</h2><p>如果只添加一个参数相当于直接在jquery对象增加了一个属性，如果是多个参数，那么会合并到第一个参数，如：</p>
+<p>1、直接添加对象属性为函数</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> t1 = $.extend(&#123;</span><br><span class="line">	hello: <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">		<span class="built_in">console</span>.log(<span class="string">'t1 is executed'</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br><span class="line"><span class="comment">//在全局变量中添加了hello函数</span></span><br><span class="line"><span class="built_in">console</span>.log($.hello());</span><br></pre></td></tr></table></figure>
+<p>这种方式就直接在jQuery全局对象上添加的函数。</p>
+<p>2、另外一种就是拷贝对象</p>
+<p><strong>深拷贝</strong>，只要对象里面还有对象，会递归的去复制到目标对象，并把以前的值覆盖掉</p>
+<figure class="highlight ebnf"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">var child</span> = &#123;name: <span class="string">'small'</span>, age: 1&#125;;</span><br><span class="line"><span class="attribute">var target</span> = &#123;foo: <span class="string">'duke'</span>, child: child&#125;;</span><br><span class="line"><span class="attribute">var opChild</span> = &#123;name:<span class="string">'sm'</span>, age:2&#125;;</span><br><span class="line"><span class="attribute">var option</span> = &#123;foo: <span class="string">'op'</span>, child:opChild&#125;;</span><br><span class="line"><span class="attribute">var result</span> = $.extend(target, &#123;foo: <span class="string">'success'</span>&#125;, option)</span><br><span class="line">console.log(result);</span><br></pre></td></tr></table></figure>
+<p>输出结果，：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//child的属性值全部被覆盖</span></span><br><span class="line">&#123;<span class="string">name:</span> <span class="string">"sm"</span>, <span class="string">age:</span> <span class="number">2</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>浅拷贝</strong>对象里面不嵌套的拷贝，如：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> t3 = $.extend(&#123;<span class="string">'realname'</span>:<span class="string">'hello'</span>, <span class="string">'password'</span>: <span class="number">111111</span>&#125;, &#123;<span class="string">'password'</span>:<span class="string">'222222'</span>&#125;);</span><br><span class="line"><span class="built_in">console</span>.log(t3);</span><br></pre></td></tr></table></figure>
+
+<p>输入结果</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-tag">Object</span> &#123;<span class="attribute">realname</span>: <span class="string">"hello"</span>, password: <span class="string">"222222"</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>这种参数扩展非常有用，在jquery插件中常常会用到默认有哪些参数值，然后用户调用的时候可以重写这些参数值，也可以增加额外的参数。</p>
+<h2 id="fn-extend方式添加插件"><a href="#fn-extend方式添加插件" class="headerlink" title="$.fn.extend方式添加插件"></a>$.fn.extend方式添加插件</h2><p>前面已经介绍了，$.fn.extend与$.extend指向的是同一个函数，所以两者的功能是一样的，$.fn.extend只是针对原型对象的。写一个简单的扩展就明白了：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$.fn.extend(&#123;</span><br><span class="line">	foo : <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">		<span class="built_in">console</span>.log(<span class="string">'foo'</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br><span class="line"><span class="built_in">console</span>.log($.foo)<span class="comment">//输出undefined</span></span><br><span class="line">$().foo();<span class="comment">//输出foo</span></span><br></pre></td></tr></table></figure>
+<p>如果想支持链式调用，可以在自定义的函数里面return一个jquery原型对象就可以了。如下所示：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$.fn.extend(&#123;</span><br><span class="line">	foo : <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">this</span>;<span class="comment">//this代表jQuery.prototype原型对象</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;);</span><br><span class="line">$(<span class="built_in">document</span>).foo().empty();</span><br></pre></td></tr></table></figure>
+<p>由于extend函数里面就是把传入的属性赋值给当前对象（jQuery实例或者jQuery原型对象），所以如果只是一个函数扩展的话，也可以直接这样定义：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$.fn.foo = <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">this</span>;<span class="comment">//this代表jQuery.prototype原型对象</span></span><br><span class="line">	&#125;;</span><br><span class="line">$(<span class="built_in">document</span>).foo().empty();</span><br></pre></td></tr></table></figure>
+
+<h2 id="自定义插件标准"><a href="#自定义插件标准" class="headerlink" title="自定义插件标准"></a>自定义插件标准</h2><p>上面两种插件方式都是以直接传入参数形式进行扩展的，既然是扩展就应该遵守开闭原则，只对外就行修改，并且不能与原对象造成影响。所以自定义插件应该封装成一个类与外界保持独立，JavaScript虽然没有类但是有命名空间，可以为插件定义一个私有化空间，目前一般都采用匿名函数来定义，如：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">(<span class="function"><span class="keyword">function</span>(<span class="params">$</span>)</span>&#123;</span><br><span class="line">    $.fn.foo = <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="built_in">console</span>.log(<span class="string">'foo'</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;)(jQuery);</span><br><span class="line">$(<span class="built_in">document</span>).foo();<span class="comment">//输出foo</span></span><br></pre></td></tr></table></figure>
+<p>可以看到匿名函数传入了jQuery对象，内部函数就可以共享jQuery的很多功能了，所以一般引入其他插件，有一个前提就是必须先引用jquery.js再引用插件的js文件。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/jQuery/">jQuery</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/jQuery/">jQuery</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://zeng233.github.io/2016/07/07/4.1jQuery%E6%8F%92%E4%BB%B6%E6%89%A9%E5%B1%95%E5%88%86%E6%9E%90/" data-title="jQuery插件扩展分析 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/07/20/2.9mybatis自定义插件实现读写分离/" title="mybatis自定义插件实现读写分离">
+  <strong>上一篇：</strong><br/>
+  <span>
+  mybatis自定义插件实现读写分离</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/07/06/5.2JavaScript中的this常见误区/"  title="JavaScript中的this常见误区">
+ <strong>下一篇：</strong><br/> 
+ <span>JavaScript中的this常见误区
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/07/07/4.1jQuery插件扩展分析/" data-title="jQuery插件扩展分析" data-url="http://zeng233.github.io/2016/07/07/4.1jQuery%E6%8F%92%E4%BB%B6%E6%89%A9%E5%B1%95%E5%88%86%E6%9E%90/"></div>
+</section>
+
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#jQuery对象简介"><span class="toc-number">1.</span> <span class="toc-text">jQuery对象简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#jQuery两种添加插件方式"><span class="toc-number">2.</span> <span class="toc-text">jQuery两种添加插件方式</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#extend方式添加插件"><span class="toc-number">2.1.</span> <span class="toc-text">$.extend方式添加插件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#fn-extend方式添加插件"><span class="toc-number">2.2.</span> <span class="toc-text">$.fn.extend方式添加插件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#自定义插件标准"><span class="toc-number">2.3.</span> <span class="toc-text">自定义插件标准</span></a></li></ol></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="github-card">
+<p class="asidetitle">Github 名片</p>
+<div class="github-card" data-github="zeng233" data-theme="medium"></div>
+<script type="text/javascript" src="//cdn.jsdelivr.net/github-cards/latest/widget.js" ></script>
+</div>
+
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java-SE/" title="Java SE">Java SE<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/programming-road/" title="programming road">programming road<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/spring/" title="spring">spring<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/concurrent/" title="concurrent">concurrent<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/coding/" title="coding">coding<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IoC/" title="IoC">IoC<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://coolshell.cn/" target="_blank" title="酷壳">酷壳</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm.taobao.org/" target="_blank" title="阿里中间件团队博客">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://martinfowler.com/" target="_blank" title="Martin Fowler&#39;s Blog">Martin Fowler&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://gee.cs.oswego.edu/" target="_blank" title="Doug Lea&#39;s Blog">Doug Lea&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://stackoverflow.com/" target="_blank" title="StackOverflow">StackOverflow</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=2043260800&verifier=b3593ceb&dpc=1"></iframe>
+</div>
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> If you work hard, you will be successful! <br/>
+			This is my blog,believe it or not.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2043260800" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/zeng233" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		<a href="http://stackoverflow.com/users/4250881" target="_blank" class="icon-stack-overflow" title="stackoverflow"></a>
+		
+		
+		<a href="https://twitter.com/zeng233" target="_blank" class="icon-twitter" title="twitter"></a>
+		
+		
+		<a href="https://www.facebook.com/hua.zeng.545" target="_blank" class="icon-facebook" title="facebook"></a>
+		
+		
+		<a href="https://www.linkedin.com/in/zeng-hua-b3314978" target="_blank" class="icon-linkedin" title="linkedin"></a>
+		
+		
+		
+		<a href="http://www.zhihu.com/people/zhu-lin-xian-ren" target="_blank" class="icon-zhihu" title="知乎"></a>
+		
+		
+		<a href="https://plus.google.com/106512881304692844041?rel=author" target="_blank" class="icon-google_plus" title="Google+"></a>
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2023 
+		
+		<a href="/about" target="_blank" title="竹林闲人">竹林闲人</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"zeng233"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?e6d1f421bbc9962127a50488f9ed37d1";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

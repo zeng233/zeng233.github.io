@@ -1,0 +1,750 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>concurrent包分析之Executor框架 | DukeZeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="竹林闲人">
+    
+
+    
+    <meta name="description" content="为什么使用executor框架 线程生命周期的开销：线程比较少的情况使用new Thread(task)无多大影响，但是如果涉及到线程比较多的情况，应用的性能就会受到影响，如果jdbc创建连接一样，new Thead创建线程也会耗资源、耗时间的。 资源的消耗量：活动线程会消耗系统性能，如果运行的线程数量多余可用的处理器数，那么就会有大量空闲的线程占用内存，会给垃圾收集器带来压力，如果有cpu资源竞">
+<meta property="og:type" content="article">
+<meta property="og:title" content="concurrent包分析之Executor框架">
+<meta property="og:url" content="http://zeng233.github.io/2016/03/02/3.2concurrent2/index.html">
+<meta property="og:site_name" content="DukeZeng">
+<meta property="og:description" content="为什么使用executor框架 线程生命周期的开销：线程比较少的情况使用new Thread(task)无多大影响，但是如果涉及到线程比较多的情况，应用的性能就会受到影响，如果jdbc创建连接一样，new Thead创建线程也会耗资源、耗时间的。 资源的消耗量：活动线程会消耗系统性能，如果运行的线程数量多余可用的处理器数，那么就会有大量空闲的线程占用内存，会给垃圾收集器带来压力，如果有cpu资源竞">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://zeng233.github.io/images/javaSE/concurrent/2-1.png">
+<meta property="og:image" content="http://zeng233.github.io/images/javaSE/concurrent/2-2.png">
+<meta property="og:image" content="http://zeng233.github.io/images/javaSE/concurrent/2-3.png">
+<meta property="article:published_time" content="2016-03-02T12:57:34.000Z">
+<meta property="article:modified_time" content="2016-03-02T12:57:34.000Z">
+<meta property="article:author" content="竹林闲人">
+<meta property="article:tag" content="concurrent">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zeng233.github.io/images/javaSE/concurrent/2-1.png">
+<meta name="twitter:creator" content="@zeng233">
+<link rel="publisher" href="106512881304692844041">
+
+    
+    <link rel="alternative" href="/atom.xml" title="DukeZeng" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/duke.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/%02.css">
+<link rel="stylesheet" href="/.css">
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="DukeZeng">DukeZeng</a></h1>
+				<h2 class="blog-motto">竹林闲人的博客</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于我</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:zeng233.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/03/02/3.2concurrent2/" title="concurrent包分析之Executor框架" itemprop="url">concurrent包分析之Executor框架</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
+		
+  <p class="article-time">
+    <time datetime="2016-03-02T12:57:34.000Z" itemprop="datePublished"> 发表于 2016-03-02</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#为什么使用executor框架"><span class="toc-number">1.</span> <span class="toc-text">为什么使用executor框架</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Executor框架组成"><span class="toc-number">2.</span> <span class="toc-text">Executor框架组成</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#线程池"><span class="toc-number">3.</span> <span class="toc-text">线程池</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#ThreadPoolExecutor"><span class="toc-number">3.1.</span> <span class="toc-text">ThreadPoolExecutor</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#处理任务"><span class="toc-number">3.1.1.</span> <span class="toc-text">处理任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#线程池原理"><span class="toc-number">3.1.2.</span> <span class="toc-text">线程池原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ScheduledThreadPoolExecutor"><span class="toc-number">3.2.</span> <span class="toc-text">ScheduledThreadPoolExecutor</span></a></li></ol></li></ol>
+		
+		</div>
+		
+		<h1 id="为什么使用executor框架"><a href="#为什么使用executor框架" class="headerlink" title="为什么使用executor框架"></a>为什么使用executor框架</h1><ol>
+<li>线程生命周期的开销：线程比较少的情况使用new Thread(task)无多大影响，但是如果涉及到线程比较多的情况，应用的性能就会受到影响，如果jdbc创建连接一样，new Thead创建线程也会耗资源、耗时间的。</li>
+<li>资源的消耗量：活动线程会消耗系统性能，如果运行的线程数量多余可用的处理器数，那么就会有大量空闲的线程占用内存，会给垃圾收集器带来压力，如果有cpu资源竞争，还会有其他性能开销。</li>
+<li>限定创建线程的数目：如果不设定创建线程的数量，一个任务一个线程无限创建线程，高负载情况下就有可能造成OutOfMemoryError错误。所以像tomcat这种servlet容器的线程池都设置了最大线程数量的。</li>
+</ol>
+<a id="more"></a>
+<!-- --- -->
+
+<h1 id="Executor框架组成"><a href="#Executor框架组成" class="headerlink" title="Executor框架组成"></a>Executor框架组成</h1><p>Eexecutor接口：包含Eexecutor、ExecutorService、ScheduledExecutorService<br>ThreadPool线程池：包含ThreadPoolExecutor、ScheduledThreadPoolExecutor<br>Fork/Join框架：JDK1.7新增<br>类之间的关系如下：<br><img src="/images/javaSE/concurrent/2-1.png" alt></p>
+<p>Executor框架将线程的创建与执行解耦，可以异步调用，让任务相互独立，用阻塞队列管理任务，直接在当前线程中消费队列，可以减少线程之间进行资源竞争，也可以减少线程的创建和系统的开销，要廉价多了。这种设计就是经典并发模式Active Object Models（也称Actor Models）的实现，如下图：<br><img src="/images/javaSE/concurrent/2-2.png" alt><br>可以参考execute方法，就按照上面的模式来的。另外Executors工厂类创建了不同的连接池，为任务的执行分配了不同执行策略。</p>
+<h1 id="线程池"><a href="#线程池" class="headerlink" title="线程池"></a>线程池</h1><p>concurrent包里面主要包含ThreadPoolExecutor、ScheduledThreadPoolExecutor两种线程池，Executors类提供了很多创建线程池的方法<br><img src="/images/javaSE/concurrent/2-3.png" alt><br>，newFixedThreadPool创建定长的线程池、newWorkStealingPool创建ForkJoinPool（jdk1.8新增）、newCachedThreadPool创建缓存线程池（可以回收空闲的线程）、newSingleThreadExecutor创建当个线程池（保证FIFO\LIFO\优先级），newScheduledThreadPool创建定时器线程池，如果有特殊处理的，也可以根据自己的需求来创建连接池，如tomcat也是基于ThreadPoolExecutor实现了自己的连接池。</p>
+<h2 id="ThreadPoolExecutor"><a href="#ThreadPoolExecutor" class="headerlink" title="ThreadPoolExecutor"></a>ThreadPoolExecutor</h2><pre><code>public ThreadPoolExecutor(int corePoolSize,
+                              int maximumPoolSize,
+                              long keepAliveTime,
+                              TimeUnit unit,
+                              BlockingQueue&lt;Runnable&gt; workQueue) {
+    this(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue,
+     Executors.defaultThreadFactory(), defaultHandler);
+}</code></pre><p>从ThreadPoolExecutor最简单的构造函数可以看出，线程池总是依赖阻塞队列而工作的，newFixedThreadPool与newSingleThreadExecutor使用的是LinkedBlockingQueue无界队列，newCachedThreadPool使用SynchronousQueue，ThreadPoolExecutor还定义了一个Worker执行任务线程，除此之外，还有个非常重要的变量ctl（线程池控制状态）由执行器状态和工作线程的数量组成，在控制执行的时候都是围绕这个变量来判断。</p>
+<h3 id="处理任务"><a href="#处理任务" class="headerlink" title="处理任务"></a>处理任务</h3><p>参考前面的Active Object Models图，可以将线程池执行任务主要分为3个步骤：<br>1、如果任务少于线程池大小时，就作为firstTask分别创建工作线程执行任务<br>2、如果第n个任务超出了线程池大小，就加入到阻塞队列，并从新检测执行器状态状态以及工作线程数量（有可能线程发生RuntimeException挂掉，最后可工作线程数量变为0），如果工作线程挂完了就重新启动一个线程（解决线程泄露问题）。阻塞队列的任务执行就在第一步所创建的线程执行，参考代码：</p>
+<pre><code>public void execute(Runnable command) {
+    if (command == null)
+        throw new NullPointerException();
+
+    int c = ctl.get();
+    if (workerCountOf(c) &lt; corePoolSize) {
+        if (addWorker(command, true))
+            return;
+        c = ctl.get();
+    }
+    if (isRunning(c) &amp;&amp; workQueue.offer(command)) {
+        int recheck = ctl.get();
+        if (! isRunning(recheck) &amp;&amp; remove(command))
+            reject(command);
+        else if (workerCountOf(recheck) == 0)
+            //重新启动工作线程
+            addWorker(null, false);
+    }
+    else if (!addWorker(command, false))
+        reject(command);
+}
+
+final void runWorker(Worker w) {
+    Thread wt = Thread.currentThread();
+    Runnable task = w.firstTask;
+    w.firstTask = null;
+    w.unlock(); // allow interrupts
+    boolean completedAbruptly = true;
+    try {
+        //判断当前任务或者检测阻塞队列
+        while (task != null || (task = getTask()) != null) {
+            w.lock();
+            // If pool is stopping, ensure thread is interrupted;
+            // if not, ensure thread is not interrupted.  This
+            // requires a recheck in second case to deal with
+            // shutdownNow race while clearing interrupt
+            if ((runStateAtLeast(ctl.get(), STOP) ||
+                 (Thread.interrupted() &amp;&amp;
+                  runStateAtLeast(ctl.get(), STOP))) &amp;&amp;
+                !wt.isInterrupted())
+                wt.interrupt();
+            try {
+                beforeExecute(wt, task);
+                Throwable thrown = null;
+                try {
+                    task.run();
+                } catch (RuntimeException x) {
+                    thrown = x; throw x;
+                } catch (Error x) {
+                    thrown = x; throw x;
+                } catch (Throwable x) {
+                    thrown = x; throw new Error(x);
+                } finally {
+                    afterExecute(task, thrown);
+                }
+            } finally {
+                task = null;
+                w.completedTasks++;
+                w.unlock();
+            }
+        }
+        completedAbruptly = false;
+    } finally {
+        processWorkerExit(w, completedAbruptly);
+    }
+}</code></pre><p>3、如果任务入队列失败了，就重新开启一个线程去执行，如果还是失败了，就可以确定是执行器关闭了或者线程池已经达到饱和状态了。</p>
+<h3 id="线程池原理"><a href="#线程池原理" class="headerlink" title="线程池原理"></a>线程池原理</h3><p>从上面的执行步骤来就可以看出线程池依赖于阻塞队列，然后基于生产者消费者模式实现的，execute()方法一直添加任务（生产者），当任务数量超出线程池的最大长度就添加到阻塞队列等待排队执行，而第一次创建的所有工作线程（最大数量为线程池的最大长度）就会一直判断线程池里面是否有任务执行，如果有就执行任务（消费者）。这样做就可以重用线程了，不用每次去创建线程，性能肯定比一个任务一个线程好多了。</p>
+<h2 id="ScheduledThreadPoolExecutor"><a href="#ScheduledThreadPoolExecutor" class="headerlink" title="ScheduledThreadPoolExecutor"></a>ScheduledThreadPoolExecutor</h2><p>ScheduledThreadPoolExecutor由ScheduledFutureTask、DelayedWorkQueue组成，实现任务执行还是用的父类ThreadPoolExecutor的工作线程。jdk1.5之前使用定时任务都用的Timer，但是与ScheduledThreadPoolExecutor有着明显区别：</p>
+<ol>
+<li>Timer使用的System.currentTimeMillis()毫秒来控制时间，ScheduledThreadPoolExecutor使用System.nanoTime()纳秒控制更加精准，并且可以使用TimeUnit进行时间的跨单元转换。</li>
+<li>Timer只有单个工作线程，ScheduledThreadPoolExecutor可以配置多个工作线程。</li>
+<li>如果工资线程发生异常，Timer会造成线程泄露没有重启的线程，ScheduledThreadPoolExecutor会一直检测工作线程的数量，如果没有工作线程了，会一直添加数量小于线程池的工作线程（使用父类ThreadPoolExecutor的addaddWorker方法）<br>从以上比较可以看出，ScheduledThreadPoolExecutor就是取代Timer的。</li>
+</ol>
+<p>还是从一个简单的例子看ScheduledThreadPoolExecutor是如何工作的。addWork参考领导/跟随者模式</p>
+<pre><code>@Test
+public void testScheduleAtFixedRate() throws Exception {
+    ScheduledThreadPoolExecutor p = new ScheduledThreadPoolExecutor(1);
+    CountDownLatch latch = new CountDownLatch(3);
+    p.scheduleAtFixedRate(new Task(latch), 0, 1000, TimeUnit.MILLISECONDS);
+    latch.await();
+}</code></pre><p>线程池都是基于生产者消费者模式的，所以ScheduledThreadPoolExecutor也不例外，执行任务的时候会一直像队列里面添加任务：</p>
+<pre><code>private void delayedExecute(RunnableScheduledFuture&lt;?&gt; task) {
+    if (isShutdown())
+        reject(task);
+    else {
+        //添加到队列，让工作线程去消费
+        super.getQueue().add(task);
+        if (isShutdown() &amp;&amp;
+            !canRunInCurrentRunState(task.isPeriodic()) &amp;&amp;
+            remove(task))
+            task.cancel(false);
+        else
+            //启动线程
+            ensurePrestart();
+    }
+}</code></pre><p>ScheduledThreadPoolExecutor第一次执行用的父类ThreadPoolExecutor的addWorker方法添加工作线程并启动它，然后每个工作线程会检查队列里面是否有消费的线程，参考ThreadPoolExecutor的runWorker方法，与ThreadPoolExecutor有点不同的是，ScheduledThreadPoolExecutor使用的是延时阻塞队列DelayedWorkQueue。每次消费就进行take操作：</p>
+<pre><code>public RunnableScheduledFuture&lt;?&gt; take() throws InterruptedException {
+    final ReentrantLock lock = this.lock;
+    lock.lockInterruptibly();
+    try {
+        for (;;) {
+            RunnableScheduledFuture&lt;?&gt; first = queue[0];
+            if (first == null)
+                available.await();
+            else {
+                long delay = first.getDelay(NANOSECONDS);
+                if (delay &lt;= 0)
+                    //返回队列中的执行任务之前，要先执行finally模块中的唤醒操作
+                    return finishPoll(first);
+                first = null; // don&apos;t retain ref while waiting
+                if (leader != null)
+                    available.await();
+                else {
+                    //领导线程初始化为null，当前线程为线程池中的线程
+                    Thread thisThread = Thread.currentThread();
+                    leader = thisThread;
+                    try {
+                        //当前线程等待延迟时间到期
+                        available.awaitNanos(delay);
+                    } finally {
+                        if (leader == thisThread)
+                            leader = null;
+                    }
+                }
+            }
+        }
+    } finally {
+        if (leader == null &amp;&amp; queue[0] != null)
+            available.signal();
+        lock.unlock();
+    }
+}</code></pre><p>参考资料：</p>
+<ul>
+<li><a href="http://www.ibm.com/developerworks/cn/java/j-jtp0730/index.html" target="_blank" rel="noopener">Java 理论与实践: 线程池与工作队列</a></li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java-SE/">Java SE</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/concurrent/">concurrent</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://zeng233.github.io/2016/03/02/3.2concurrent2/" data-title="concurrent包分析之Executor框架 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/07/06/5.1理解JavaScript原型模式/" title="理解JavaScript原型模式">
+  <strong>上一篇：</strong><br/>
+  <span>
+  理解JavaScript原型模式</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/03/01/3.1concurrent1/"  title="concurrent包分析之前言">
+ <strong>下一篇：</strong><br/> 
+ <span>concurrent包分析之前言
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/03/02/3.2concurrent2/" data-title="concurrent包分析之Executor框架" data-url="http://zeng233.github.io/2016/03/02/3.2concurrent2/"></div>
+</section>
+
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#为什么使用executor框架"><span class="toc-number">1.</span> <span class="toc-text">为什么使用executor框架</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Executor框架组成"><span class="toc-number">2.</span> <span class="toc-text">Executor框架组成</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#线程池"><span class="toc-number">3.</span> <span class="toc-text">线程池</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#ThreadPoolExecutor"><span class="toc-number">3.1.</span> <span class="toc-text">ThreadPoolExecutor</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#处理任务"><span class="toc-number">3.1.1.</span> <span class="toc-text">处理任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#线程池原理"><span class="toc-number">3.1.2.</span> <span class="toc-text">线程池原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ScheduledThreadPoolExecutor"><span class="toc-number">3.2.</span> <span class="toc-text">ScheduledThreadPoolExecutor</span></a></li></ol></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="github-card">
+<p class="asidetitle">Github 名片</p>
+<div class="github-card" data-github="zeng233" data-theme="medium"></div>
+<script type="text/javascript" src="//cdn.jsdelivr.net/github-cards/latest/widget.js" ></script>
+</div>
+
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java-SE/" title="Java SE">Java SE<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/programming-road/" title="programming road">programming road<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/spring/" title="spring">spring<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/concurrent/" title="concurrent">concurrent<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/coding/" title="coding">coding<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IoC/" title="IoC">IoC<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://coolshell.cn/" target="_blank" title="酷壳">酷壳</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm.taobao.org/" target="_blank" title="阿里中间件团队博客">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://martinfowler.com/" target="_blank" title="Martin Fowler&#39;s Blog">Martin Fowler&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://gee.cs.oswego.edu/" target="_blank" title="Doug Lea&#39;s Blog">Doug Lea&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://stackoverflow.com/" target="_blank" title="StackOverflow">StackOverflow</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=2043260800&verifier=b3593ceb&dpc=1"></iframe>
+</div>
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> If you work hard, you will be successful! <br/>
+			This is my blog,believe it or not.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2043260800" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/zeng233" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		<a href="http://stackoverflow.com/users/4250881" target="_blank" class="icon-stack-overflow" title="stackoverflow"></a>
+		
+		
+		<a href="https://twitter.com/zeng233" target="_blank" class="icon-twitter" title="twitter"></a>
+		
+		
+		<a href="https://www.facebook.com/hua.zeng.545" target="_blank" class="icon-facebook" title="facebook"></a>
+		
+		
+		<a href="https://www.linkedin.com/in/zeng-hua-b3314978" target="_blank" class="icon-linkedin" title="linkedin"></a>
+		
+		
+		
+		<a href="http://www.zhihu.com/people/zhu-lin-xian-ren" target="_blank" class="icon-zhihu" title="知乎"></a>
+		
+		
+		<a href="https://plus.google.com/106512881304692844041?rel=author" target="_blank" class="icon-google_plus" title="Google+"></a>
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2023 
+		
+		<a href="/about" target="_blank" title="竹林闲人">竹林闲人</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"zeng233"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?e6d1f421bbc9962127a50488f9ed37d1";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

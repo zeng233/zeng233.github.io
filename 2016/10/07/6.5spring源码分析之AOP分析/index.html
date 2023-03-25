@@ -1,0 +1,772 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>spring源码分析之AOP分析 | DukeZeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="竹林闲人">
+    
+
+    
+    <meta name="description" content="AOP简介什么是AOP？这可能是学习AOP时，最想知道的问题，在研究spring aop这块查阅了大量的资料，即使AOP联盟当初指定的规范也没有解释这个概念，如同OOP一样，AOP只是一种编程思想了，水平有限我只能这样解释了。OOP代码中的体现就是类了，那AOP呢？其实也是类（也可以理解为模块化），所谓的特殊的横切组织，参考下图：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring源码分析之AOP分析">
+<meta property="og:url" content="http://zeng233.github.io/2016/10/07/6.5spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BAOP%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="DukeZeng">
+<meta property="og:description" content="AOP简介什么是AOP？这可能是学习AOP时，最想知道的问题，在研究spring aop这块查阅了大量的资料，即使AOP联盟当初指定的规范也没有解释这个概念，如同OOP一样，AOP只是一种编程思想了，水平有限我只能这样解释了。OOP代码中的体现就是类了，那AOP呢？其实也是类（也可以理解为模块化），所谓的特殊的横切组织，参考下图：">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/4-1.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/4-2.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/4-3.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/4-4.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/4-5.png">
+<meta property="article:published_time" content="2016-10-07T13:05:06.000Z">
+<meta property="article:modified_time" content="2016-10-07T13:05:06.000Z">
+<meta property="article:author" content="竹林闲人">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zeng233.github.io/images/spring/4-1.png">
+<meta name="twitter:creator" content="@zeng233">
+<link rel="publisher" href="106512881304692844041">
+
+    
+    <link rel="alternative" href="/atom.xml" title="DukeZeng" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/duke.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/%02.css">
+<link rel="stylesheet" href="/.css">
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="DukeZeng">DukeZeng</a></h1>
+				<h2 class="blog-motto">竹林闲人的博客</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于我</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:zeng233.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/10/07/6.5spring源码分析之AOP分析/" title="spring源码分析之AOP分析" itemprop="url">spring源码分析之AOP分析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
+		
+  <p class="article-time">
+    <time datetime="2016-10-07T13:05:06.000Z" itemprop="datePublished"> 发表于 2016-10-07</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#AOP简介"><span class="toc-number">1.</span> <span class="toc-text">AOP简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#spring-AOP简介"><span class="toc-number">2.</span> <span class="toc-text">spring AOP简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#创建代理bean"><span class="toc-number">3.</span> <span class="toc-text">创建代理bean</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#执行代理bean"><span class="toc-number">4.</span> <span class="toc-text">执行代理bean</span></a></li></ol>
+		
+		</div>
+		
+		<h1 id="AOP简介"><a href="#AOP简介" class="headerlink" title="AOP简介"></a>AOP简介</h1><p>什么是AOP？这可能是学习AOP时，最想知道的问题，在研究spring aop这块查阅了大量的资料，即使AOP联盟当初指定的规范也没有解释这个概念，如同OOP一样，AOP只是一种编程思想了，水平有限我只能这样解释了。OOP代码中的体现就是类了，那AOP呢？其实也是类（也可以理解为模块化），所谓的特殊的横切组织，参考下图：</p>
+<a id="more"></a>
+<!-- --- -->
+
+<p><img src="/images/spring/4-1.png" alt></p>
+<p>一般项目里面的函数会包含业务性处理与非业务性处理两种，随着业务的发展里面可能会包含很多非业务的处理，这些非主业务的处理有可能在其他地方继续调用，这样代码的耦合性就非常高了。灰色的切面就是AOP的体现了，这些非业务的处理从代码中解耦出来就优雅多了。如果要实现自己的AOP组件要包含拦截器框架、字节码解析、织入组件（如动态代理）、配置组件，摘自<a href="http://aopalliance.sourceforge.net/motivations.html" target="_blank" rel="noopener">AOP联盟</a></p>
+<blockquote>
+<p>All these projects have their onw goals and speficities. However, several common basic components are still usefull (and sometimes required) to build a full AO system. For instance, a component that is able to add metadata on the base components, an interception framework, a component that is able to perform code translation in order to advice the classes, a weaver component, a configuration component, and so on.</p>
+</blockquote>
+<h1 id="spring-AOP简介"><a href="#spring-AOP简介" class="headerlink" title="spring AOP简介"></a>spring AOP简介</h1><p>如上面所述，spring实现AOP就包含了其中一些组件，如下图所示：</p>
+<p><img src="/images/spring/4-2.png" alt></p>
+<p>Spring AOP提供了几个重要概念性的东西，参考<a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/htmlsingle/#aop-introduction-defn" target="_blank" rel="noopener">文档</a>，其中Joinpoint与Advice是aop联盟提供的aop接口，Advice就广义的理解为拦截器，Joinpoint就是方法的执行（spring采用动态代理执行），Pointcut匹配的执行方法集合。<br>spring内部AOP实现包含了动态代理（JDK proxy、cglib proxy）与静态代理（AspectJ实现参考<a href="http://www.eclipse.org/aspectj/doc/next/devguide/ltw.html" target="_blank" rel="noopener">这里</a>，在编译期间织入），<br>spring AOP只指针对<a href="http://docs.spring.io/spring/docs/current/spring-framework-reference/htmlsingle/#aop-introduction-spring-defn" target="_blank" rel="noopener">方法级别</a>，如果想粒度更细（如改变属性或者构造函数之类的）就要AspectJ了，但是spring解析Pointcut方法匹配还是用的AspectJ相关的包。</p>
+<h1 id="创建代理bean"><a href="#创建代理bean" class="headerlink" title="创建代理bean"></a>创建代理bean</h1><p>下面以JDK动态代理实现AOP为例进行分析，配置文件如下：</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;beans xmlns=&quot;http://www.springframework.org/schema/beans&quot;
+    xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+    xmlns:aop=&quot;http://www.springframework.org/schema/aop&quot;
+    xsi:schemaLocation=&quot;http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd&quot;&gt;
+
+    &lt;bean id=&quot;foo&quot; class=&quot;mytest.aop.FooImpl&quot;/&gt;
+
+    &lt;bean id=&quot;aroundBean&quot; class=&quot;mytest.aop.config.AroundBean&quot;/&gt;
+
+    &lt;bean id=&quot;myAdvice&quot; class=&quot;mytest.aop.config.MyAdvice&quot;/&gt;
+
+    &lt;bean id=&quot;myAspect&quot; class=&quot;mytest.aop.config.MyAspect&quot;/&gt;
+
+    &lt;aop:config&gt;
+        &lt;aop:pointcut expression=&quot;execution(* mytest.aop.config.*.*(..))&quot; id=&quot;pc&quot;/&gt;
+
+        &lt;aop:advisor advice-ref=&quot;myAdvice&quot; pointcut-ref=&quot;pc&quot;/&gt;
+        &lt;aop:aspect ref=&quot;myAspect&quot;&gt;
+            &lt;aop:around method=&quot;aroundAdvice&quot; pointcut-ref=&quot;pc&quot;/&gt;
+        &lt;/aop:aspect&gt;
+    &lt;/aop:config&gt;
+
+&lt;/beans&gt;</code></pre><p>参考《spring源码分析之基于注解配置的bean初始化分析》，跟分析<a href="context:component-scan/">context:component-scan/</a>标签差不多，使用<a href="aop:config">aop:config</a>就由AopNamespaceHandler解析命名空间，然后ConfigBeanDefinitionParser解析标签，最后把AspectJAwareAdvisorAutoProxyCreator注册到容器中：</p>
+<p><img src="/images/spring/4-3.png" alt></p>
+<p>从这个图中就可以看出，AspectJAwareAdvisorAutoProxyCreator是BeanPostProcessor的一个子类，这个类就是执行创建代理bean的入口。整个创建流程参考下图：</p>
+<p><img src="/images/spring/4-4.png" alt></p>
+<p>初始化bean之前AspectJAwareAdvisorAutoProxyCreator将排除一些类不会生成代理类，如Advisor、Advice、Aspect以及Pointcut不匹配的类，参考AbstractAutowireCapableBeanFactory：</p>
+<pre><code>protected Object initializeBean(final String beanName, final Object bean, RootBeanDefinition mbd) {
+    //执行initializeBean，bean是否有其他操作（如代理对象）
+    if (System.getSecurityManager() != null) {
+        AccessController.doPrivileged(new PrivilegedAction&lt;Object&gt;() {
+            @Override
+            public Object run() {
+                invokeAwareMethods(beanName, bean);
+                return null;
+            }
+        }, getAccessControlContext());
+    }
+    else {
+        invokeAwareMethods(beanName, bean);
+    }
+
+    Object wrappedBean = bean;
+    if (mbd == null || !mbd.isSynthetic()) {
+//排除Advice、Advise、Aspect切面相关的类，并创建拦截器链
+        wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
+    }
+
+    try {
+        invokeInitMethods(beanName, wrappedBean, mbd);
+    }
+    catch (Throwable ex) {
+        throw new BeanCreationException(
+                (mbd != null ? mbd.getResourceDescription() : null),
+                beanName, &quot;Invocation of init method failed&quot;, ex);
+    }
+
+    if (mbd == null || !mbd.isSynthetic()) {
+        //AspectJAwareAdvisorAutoProxyCreator执行创建代理对象
+        wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
+    }
+    return wrappedBean;
+}</code></pre><p>参考applyBeanPostProcessorsAfterInitialization方法，创建代理bean就有AspectJAwareAdvisorAutoProxyCreator的父类AbstractAdvisorAutoProxyCreator执行：</p>
+<pre><code>protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+    if (beanName != null &amp;&amp; this.targetSourcedBeans.contains(beanName)) {
+        return bean;
+    }
+    //postProcessBeforeInstantiation方法已经将排除的bean放置到advisedBeans
+    if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
+        return bean;
+    }
+    if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
+        this.advisedBeans.put(cacheKey, Boolean.FALSE);
+        return bean;
+    }
+
+    //获取Alliance中实现的Interceptors
+    //一般bean如果不包含在PointCut表达式中，返回为null
+    // Create proxy if we have advice.
+    Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+    if (specificInterceptors != DO_NOT_PROXY) {
+        this.advisedBeans.put(cacheKey, Boolean.TRUE);
+        //将拦截器链传递给ProxyFactory
+        Object proxy = createProxy(
+                bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+        this.proxyTypes.put(cacheKey, proxy.getClass());
+        return proxy;
+    }
+
+    this.advisedBeans.put(cacheKey, Boolean.FALSE);
+    return bean;
+}</code></pre><p>前面的配置文件没有特殊的配置，spring内部默认使用JDK动态代理，参考DefaultAopProxyFactory：</p>
+<pre><code>public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
+    mylog.debug(&quot;创建JdkDynamicAopProxy还是ObjenesisCglibAopProxy&quot;);
+    //检查是不是接口，或者是不是强制设置ProxyTargetClass为true，是就使用Cglib代理
+    if (config.isOptimize() || config.isProxyTargetClass() || hasNoUserSuppliedProxyInterfaces(config)) {
+        Class&lt;?&gt; targetClass = config.getTargetClass();
+        if (targetClass == null) {
+            throw new AopConfigException(&quot;TargetSource cannot determine target class: &quot; +
+                    &quot;Either an interface or a target is required for proxy creation.&quot;);
+        }
+        if (targetClass.isInterface() || Proxy.isProxyClass(targetClass)) {
+            return new JdkDynamicAopProxy(config);
+        }
+
+        return new ObjenesisCglibAopProxy(config);
+    }
+    else {
+        return new JdkDynamicAopProxy(config);
+    }
+}</code></pre><p>然后JdkDynamicAopProxy通过getProxy就获取到代理对象了。再些一个测试类，使用上面的配置文件：</p>
+<pre><code>@Test
+public void testProxy() {
+    ITestBean aroundBean = (ITestBean) context.getBean(&quot;aroundBean&quot;);
+    IFoo foo = (IFoo)context.getBean(&quot;foo&quot;);
+
+    System.out.println(&quot;aroundBean：&quot; + AopUtils.isAopProxy(aroundBean));
+    System.out.println(&quot;foo：&quot; + AopUtils.isAopProxy(foo));
+}</code></pre><p>输入结果为：</p>
+<pre><code>aroundBean：true
+foo：false</code></pre><p>aroundBean在拦截表达式内，所以是代理对象，foo不在该范围内就不是代理对象。</p>
+<h1 id="执行代理bean"><a href="#执行代理bean" class="headerlink" title="执行代理bean"></a>执行代理bean</h1><p>由于跟bean相关的拦截器初始化时就已经配置好了，JdkDynamicAopProxy实现了InvocationHandler，所以执行bean的方法时就直接调用invoke方法，执行流程如下：</p>
+<p><img src="/images/spring/4-5.png" alt></p>
+<p>参考ReflectiveMethodInvocation（Joinpoint的一个实现类）执行拦截器链以及目标函数：</p>
+<pre><code>public Object proceed() throws Throwable {
+    //    We start with an index of -1 and increment early.
+    if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
+        return invokeJoinpoint();
+    }
+
+    Object interceptorOrInterceptionAdvice =
+            this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+    if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher) {
+        // Evaluate dynamic method matcher here: static part will already have
+        // been evaluated and found to match.
+        InterceptorAndDynamicMethodMatcher dm =
+                (InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
+        if (dm.methodMatcher.matches(this.method, this.targetClass, this.arguments)) {
+            return dm.interceptor.invoke(this);
+        }
+        else {
+            // Dynamic matching failed.
+            // Skip this interceptor and invoke the next in the chain.
+            return proceed();
+        }
+    }
+    else {
+        // It&apos;s an interceptor, so we just invoke it: The pointcut will have
+        // been evaluated statically before this object was constructed.
+        return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
+    }
+}</code></pre><p>执行测试代码</p>
+<pre><code>@Test
+public void testAround() {
+    //如果是JDK代理只能声明接口，获取到的实例是JDK产生的代理bean
+    ITestBean aroundBean = (ITestBean) context.getBean(&quot;aroundBean&quot;);
+    aroundBean.print();
+}</code></pre><p>最后打印输出：</p>
+<pre><code>MyAspect: around before
+AroundBean&apos;s print
+MyAspect: around after</code></pre>  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/spring/">spring</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/spring/">spring</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://zeng233.github.io/2016/10/07/6.5spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BAOP%E5%88%86%E6%9E%90/" data-title="spring源码分析之AOP分析 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/10/08/6.4spring事务失效常见问题分析/" title="spring事务失效常见问题分析">
+  <strong>上一篇：</strong><br/>
+  <span>
+  spring事务失效常见问题分析</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/09/06/6.3spring源码分析之基于注解配置的bean初始化分析/"  title="spring源码分析之基于注解配置的bean初始化分析">
+ <strong>下一篇：</strong><br/> 
+ <span>spring源码分析之基于注解配置的bean初始化分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/10/07/6.5spring源码分析之AOP分析/" data-title="spring源码分析之AOP分析" data-url="http://zeng233.github.io/2016/10/07/6.5spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BAOP%E5%88%86%E6%9E%90/"></div>
+</section>
+
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#AOP简介"><span class="toc-number">1.</span> <span class="toc-text">AOP简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#spring-AOP简介"><span class="toc-number">2.</span> <span class="toc-text">spring AOP简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#创建代理bean"><span class="toc-number">3.</span> <span class="toc-text">创建代理bean</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#执行代理bean"><span class="toc-number">4.</span> <span class="toc-text">执行代理bean</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="github-card">
+<p class="asidetitle">Github 名片</p>
+<div class="github-card" data-github="zeng233" data-theme="medium"></div>
+<script type="text/javascript" src="//cdn.jsdelivr.net/github-cards/latest/widget.js" ></script>
+</div>
+
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java-SE/" title="Java SE">Java SE<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/programming-road/" title="programming road">programming road<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/spring/" title="spring">spring<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/concurrent/" title="concurrent">concurrent<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/coding/" title="coding">coding<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IoC/" title="IoC">IoC<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://coolshell.cn/" target="_blank" title="酷壳">酷壳</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm.taobao.org/" target="_blank" title="阿里中间件团队博客">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://martinfowler.com/" target="_blank" title="Martin Fowler&#39;s Blog">Martin Fowler&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://gee.cs.oswego.edu/" target="_blank" title="Doug Lea&#39;s Blog">Doug Lea&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://stackoverflow.com/" target="_blank" title="StackOverflow">StackOverflow</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=2043260800&verifier=b3593ceb&dpc=1"></iframe>
+</div>
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> If you work hard, you will be successful! <br/>
+			This is my blog,believe it or not.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2043260800" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/zeng233" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		<a href="http://stackoverflow.com/users/4250881" target="_blank" class="icon-stack-overflow" title="stackoverflow"></a>
+		
+		
+		<a href="https://twitter.com/zeng233" target="_blank" class="icon-twitter" title="twitter"></a>
+		
+		
+		<a href="https://www.facebook.com/hua.zeng.545" target="_blank" class="icon-facebook" title="facebook"></a>
+		
+		
+		<a href="https://www.linkedin.com/in/zeng-hua-b3314978" target="_blank" class="icon-linkedin" title="linkedin"></a>
+		
+		
+		
+		<a href="http://www.zhihu.com/people/zhu-lin-xian-ren" target="_blank" class="icon-zhihu" title="知乎"></a>
+		
+		
+		<a href="https://plus.google.com/106512881304692844041?rel=author" target="_blank" class="icon-google_plus" title="Google+"></a>
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2023 
+		
+		<a href="/about" target="_blank" title="竹林闲人">竹林闲人</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"zeng233"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?e6d1f421bbc9962127a50488f9ed37d1";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

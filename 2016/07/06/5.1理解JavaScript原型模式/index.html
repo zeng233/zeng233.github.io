@@ -1,0 +1,610 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>理解JavaScript原型模式 | DukeZeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="竹林闲人">
+    
+
+    
+    <meta name="description" content="理解原型模式原型模式简单点说就是各个实例共享一个原型对象。JavaScript实现原型模式非常简单，直接用个prototype就实现了。新建实例里面保存了指针指向同一个原型对象，而与构造函数没有关系，参考原型图：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="理解JavaScript原型模式">
+<meta property="og:url" content="http://zeng233.github.io/2016/07/06/5.1%E7%90%86%E8%A7%A3JavaScript%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F/index.html">
+<meta property="og:site_name" content="DukeZeng">
+<meta property="og:description" content="理解原型模式原型模式简单点说就是各个实例共享一个原型对象。JavaScript实现原型模式非常简单，直接用个prototype就实现了。新建实例里面保存了指针指向同一个原型对象，而与构造函数没有关系，参考原型图：">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://zeng233.github.io/images/web/JavaScript/13-1.png">
+<meta property="og:image" content="http://zeng233.github.io/images/web/JavaScript/13-2.png">
+<meta property="article:published_time" content="2016-07-06T14:04:17.000Z">
+<meta property="article:modified_time" content="2016-03-02T12:57:34.000Z">
+<meta property="article:author" content="竹林闲人">
+<meta property="article:tag" content="JavaScript">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zeng233.github.io/images/web/JavaScript/13-1.png">
+<meta name="twitter:creator" content="@zeng233">
+<link rel="publisher" href="106512881304692844041">
+
+    
+    <link rel="alternative" href="/atom.xml" title="DukeZeng" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/duke.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/%02.css">
+<link rel="stylesheet" href="/.css">
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="DukeZeng">DukeZeng</a></h1>
+				<h2 class="blog-motto">竹林闲人的博客</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于我</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:zeng233.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/07/06/5.1理解JavaScript原型模式/" title="理解JavaScript原型模式" itemprop="url">理解JavaScript原型模式</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
+		
+  <p class="article-time">
+    <time datetime="2016-07-06T14:04:17.000Z" itemprop="datePublished"> 发表于 2016-07-06</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#理解原型模式"><span class="toc-number">1.</span> <span class="toc-text">理解原型模式</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#两种实现方式"><span class="toc-number">2.</span> <span class="toc-text">两种实现方式</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#直接在原型对象里面添加属性和方法"><span class="toc-number">2.1.</span> <span class="toc-text">直接在原型对象里面添加属性和方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重写原型对象"><span class="toc-number">2.2.</span> <span class="toc-text">重写原型对象</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#原型链的继承"><span class="toc-number">3.</span> <span class="toc-text">原型链的继承</span></a></li></ol>
+		
+		</div>
+		
+		<h1 id="理解原型模式"><a href="#理解原型模式" class="headerlink" title="理解原型模式"></a>理解原型模式</h1><p>原型模式简单点说就是各个实例共享一个原型对象。JavaScript实现原型模式非常简单，直接用个prototype就实现了。新建实例里面保存了指针指向同一个原型对象，而与构造函数没有关系，参考原型图：</p>
+<a id="more"></a>
+<!-- --- -->
+
+<p><img src="/images/web/JavaScript/13-1.png" alt></p>
+<h1 id="两种实现方式"><a href="#两种实现方式" class="headerlink" title="两种实现方式"></a>两种实现方式</h1><h2 id="直接在原型对象里面添加属性和方法"><a href="#直接在原型对象里面添加属性和方法" class="headerlink" title="直接在原型对象里面添加属性和方法"></a>直接在原型对象里面添加属性和方法</h2><p>因为各个实例要共享一个原型对象，所以就把构造函数中的属性和方法集中到一个对象就可以了，如：</p>
+<figure class="highlight delphi"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">Student</span><span class="params">()</span> <span class="comment">&#123;&#125;</span>;</span></span><br><span class="line">Student.prototype.<span class="keyword">name</span> = <span class="string">'foo'</span>;</span><br><span class="line">Student.prototype.age = <span class="string">'1'</span>;</span><br><span class="line">Student.prototype.say = <span class="function"><span class="keyword">function</span><span class="params">()</span> <span class="comment">&#123;console.log('hehe')&#125;</span></span></span><br><span class="line"><span class="function"><span class="title">var</span> <span class="title">student</span> = <span class="title">new</span> <span class="title">Student</span><span class="params">()</span>;</span></span><br><span class="line">student.say();<span class="comment">//输出hehe</span></span><br><span class="line">console.log(student<span class="function">.<span class="keyword">constructor</span>);</span><span class="comment">//输出构造函数Student</span></span><br></pre></td></tr></table></figure>
+<p>Student.prototype就是看做原型对象，在里面分别添加属性和方法就可以了。从上图中看到构造函数Student有一个prototype属性，这个属性就是指向原型对象Student.prototype的指针，执行student.say()这个实例方法，会先从实例对象student属性中去找有没有这个方法，如果没有再到原型对象里面去查询。</p>
+<h2 id="重写原型对象"><a href="#重写原型对象" class="headerlink" title="重写原型对象"></a>重写原型对象</h2><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">Student</span>(<span class="params"></span>) </span>&#123;&#125;;</span><br><span class="line"><span class="keyword">var</span> student1 = <span class="keyword">new</span> Student();</span><br><span class="line"><span class="built_in">console</span>.log(student1.name);<span class="comment">//输出undefined</span></span><br><span class="line"><span class="built_in">console</span>.log(student1.age);<span class="comment">//输出undefined</span></span><br><span class="line"><span class="built_in">console</span>.log(student1.say)<span class="comment">//输出undefined，没有重写原型对象之前，指针还是只想原来的原型对象</span></span><br><span class="line">Student.prototype = &#123;</span><br><span class="line">    <span class="comment">//constructor: Student,//强制将构造函数修改为Student</span></span><br><span class="line">    name:<span class="string">'foo'</span>,</span><br><span class="line">    age : <span class="string">'1'</span>,</span><br><span class="line">    say : <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="built_in">console</span>.log(<span class="string">'hehe'</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">var</span> student2 = <span class="keyword">new</span> Student();</span><br><span class="line"><span class="built_in">console</span>.log(student2.say);<span class="comment">//重写原型对象之后，新实例化对象指向重写后的原型对象</span></span><br><span class="line"><span class="built_in">console</span>.log(student2.constructor);<span class="comment">//重写原型对象后，构造函数变成了Object</span></span><br><span class="line">Student.prototype.foo = <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;&#125;;</span><br><span class="line"><span class="built_in">console</span>.log(student2.foo);</span><br></pre></td></tr></table></figure>
+<p>需要注意的是，如果在开始还没有重写原型对象时，实例化的对象是不能访问重写后Student.prototype里面的内容的，参考实例student1打印结果；如果重写了原型对象，再实例化student2，然后再对原型对象添加属性，student2是可以获得最新的原型对象，因为student2中只是保存的是重写后的原型对象指针，所以不管原型对象怎么修改，student2中的指针始终指向重写后的原型对象，如下图所示：</p>
+<p><img src="/images/web/JavaScript/13-2.png" alt></p>
+<h1 id="原型链的继承"><a href="#原型链的继承" class="headerlink" title="原型链的继承"></a>原型链的继承</h1><p>原型链继承记住一点就可以了，就是直接重写原型对象。其实前面重写Student原型对象就有点原型链的意思了，只不过是继承的Object不太容易看出来。下面定义两个对象，一个父对象，一个子对象。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">Father</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.fvalue = <span class="string">'father'</span>;</span><br><span class="line">&#125;</span><br><span class="line">Fathor.prototype.getFatherValue = <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.fvalue;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">Child</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.cvalue = <span class="string">'child'</span>;</span><br><span class="line">&#125;</span><br><span class="line">Child.prototype.getChildValue = <span class="function"><span class="keyword">function</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.cvalue;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//与前面的重写Student.prototype是不是有点相似了</span></span><br><span class="line"><span class="comment">//这里不要加var，不然会先加载var变量，执行的时候就找不到Father了</span></span><br><span class="line">Child.prototype = <span class="keyword">new</span> Father();</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> child = <span class="keyword">new</span> Child();</span><br><span class="line"><span class="built_in">console</span>.log(child.getFatherValue());<span class="comment">//输出father</span></span><br></pre></td></tr></table></figure>
+
+<p>参考资料：</p>
+<p>-《JavaScript高级程序设计第三版》</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/JavaScript/">JavaScript</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/JavaScript/">JavaScript</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://zeng233.github.io/2016/07/06/5.1%E7%90%86%E8%A7%A3JavaScript%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F/" data-title="理解JavaScript原型模式 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/07/06/5.2JavaScript中的this常见误区/" title="JavaScript中的this常见误区">
+  <strong>上一篇：</strong><br/>
+  <span>
+  JavaScript中的this常见误区</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/03/02/3.2concurrent2/"  title="concurrent包分析之Executor框架">
+ <strong>下一篇：</strong><br/> 
+ <span>concurrent包分析之Executor框架
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/07/06/5.1理解JavaScript原型模式/" data-title="理解JavaScript原型模式" data-url="http://zeng233.github.io/2016/07/06/5.1%E7%90%86%E8%A7%A3JavaScript%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F/"></div>
+</section>
+
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#理解原型模式"><span class="toc-number">1.</span> <span class="toc-text">理解原型模式</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#两种实现方式"><span class="toc-number">2.</span> <span class="toc-text">两种实现方式</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#直接在原型对象里面添加属性和方法"><span class="toc-number">2.1.</span> <span class="toc-text">直接在原型对象里面添加属性和方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重写原型对象"><span class="toc-number">2.2.</span> <span class="toc-text">重写原型对象</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#原型链的继承"><span class="toc-number">3.</span> <span class="toc-text">原型链的继承</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="github-card">
+<p class="asidetitle">Github 名片</p>
+<div class="github-card" data-github="zeng233" data-theme="medium"></div>
+<script type="text/javascript" src="//cdn.jsdelivr.net/github-cards/latest/widget.js" ></script>
+</div>
+
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java-SE/" title="Java SE">Java SE<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/programming-road/" title="programming road">programming road<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/spring/" title="spring">spring<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/concurrent/" title="concurrent">concurrent<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/coding/" title="coding">coding<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IoC/" title="IoC">IoC<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://coolshell.cn/" target="_blank" title="酷壳">酷壳</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm.taobao.org/" target="_blank" title="阿里中间件团队博客">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://martinfowler.com/" target="_blank" title="Martin Fowler&#39;s Blog">Martin Fowler&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://gee.cs.oswego.edu/" target="_blank" title="Doug Lea&#39;s Blog">Doug Lea&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://stackoverflow.com/" target="_blank" title="StackOverflow">StackOverflow</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=2043260800&verifier=b3593ceb&dpc=1"></iframe>
+</div>
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> If you work hard, you will be successful! <br/>
+			This is my blog,believe it or not.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2043260800" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/zeng233" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		<a href="http://stackoverflow.com/users/4250881" target="_blank" class="icon-stack-overflow" title="stackoverflow"></a>
+		
+		
+		<a href="https://twitter.com/zeng233" target="_blank" class="icon-twitter" title="twitter"></a>
+		
+		
+		<a href="https://www.facebook.com/hua.zeng.545" target="_blank" class="icon-facebook" title="facebook"></a>
+		
+		
+		<a href="https://www.linkedin.com/in/zeng-hua-b3314978" target="_blank" class="icon-linkedin" title="linkedin"></a>
+		
+		
+		
+		<a href="http://www.zhihu.com/people/zhu-lin-xian-ren" target="_blank" class="icon-zhihu" title="知乎"></a>
+		
+		
+		<a href="https://plus.google.com/106512881304692844041?rel=author" target="_blank" class="icon-google_plus" title="Google+"></a>
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2023 
+		
+		<a href="/about" target="_blank" title="竹林闲人">竹林闲人</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"zeng233"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?e6d1f421bbc9962127a50488f9ed37d1";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

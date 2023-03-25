@@ -1,0 +1,675 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>mybatis源码分析之sql语句中#{}与${}表达式分析 | DukeZeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="竹林闲人">
+    
+
+    
+    <meta name="description" content="最开始学习mybatis的时候对这两个表达式有疑惑，但一直没有深入去研究，直到最近的一个项目，测试安全的同学测试到有SQL入侵的问题，那时心里就下决心一定要把这个问题搞明白，虽然看似非常初级的一个小问题，但作为一个互联网项目却是致命的错误。记得以前在W公司工作的时候，有个同事因为没有使用占位符，而直接使用SQL拼接的方式去执行，虽然使用spring的jdbctemplate，但是原理一样，后面这个">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mybatis源码分析之sql语句中#{}与${}表达式分析">
+<meta property="og:url" content="http://zeng233.github.io/2015/10/15/2.6mybatis%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8Bsql%E8%AF%AD%E5%8F%A5%E4%B8%AD%E8%A1%A8%E8%BE%BE%E5%BC%8F%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="DukeZeng">
+<meta property="og:description" content="最开始学习mybatis的时候对这两个表达式有疑惑，但一直没有深入去研究，直到最近的一个项目，测试安全的同学测试到有SQL入侵的问题，那时心里就下决心一定要把这个问题搞明白，虽然看似非常初级的一个小问题，但作为一个互联网项目却是致命的错误。记得以前在W公司工作的时候，有个同事因为没有使用占位符，而直接使用SQL拼接的方式去执行，虽然使用spring的jdbctemplate，但是原理一样，后面这个">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2015-10-15T01:12:22.000Z">
+<meta property="article:modified_time" content="2016-02-20T04:12:22.000Z">
+<meta property="article:author" content="竹林闲人">
+<meta property="article:tag" content="mybatis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:creator" content="@zeng233">
+<link rel="publisher" href="106512881304692844041">
+
+    
+    <link rel="alternative" href="/atom.xml" title="DukeZeng" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/duke.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/%02.css">
+<link rel="stylesheet" href="/.css">
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="DukeZeng">DukeZeng</a></h1>
+				<h2 class="blog-motto">竹林闲人的博客</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于我</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:zeng233.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/10/15/2.6mybatis源码分析之sql语句中表达式分析/" title="mybatis源码分析之sql语句中#{}与${}表达式分析" itemprop="url">mybatis源码分析之sql语句中#{}与${}表达式分析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
+		
+  <p class="article-time">
+    <time datetime="2015-10-15T01:12:22.000Z" itemprop="datePublished"> 发表于 2015-10-15</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			
+		
+		</div>
+		
+		<p>最开始学习mybatis的时候对这两个表达式有疑惑，但一直没有深入去研究，直到最近的一个项目，测试安全的同学测试到有SQL入侵的问题，那时心里就下决心一定要把这个问题搞明白，虽然看似非常初级的一个小问题，但作为一个互联网项目却是致命的错误。记得以前在W公司工作的时候，有个同事因为没有使用占位符，而直接使用SQL拼接的方式去执行，虽然使用spring的jdbctemplate，但是原理一样，后面这个同事还被单独拉到办公室去痛批一顿。反正不管什么数据层的框架，只要涉及到SQL的都应该选择底层是PreparedStatement设置参数的方式去执行。其实在mybatis的wiki上面已经说得非常清楚了，使用${}表达式会有SQL入侵的风险，参考<a href="https://github.com/mybatis/mybatis-3/wiki/FAQ" target="_blank" rel="noopener">mybatis FAQ</a>，所以有必要单独拿出来分析。</p>
+<a id="more"></a>
+<!-- --- -->
+
+<p>由于前面的章节已经分析了SQL语句的生成，参考<a href="http://zeng233.github.io/2015/09/28/2.4mybatis%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8B%E5%8A%A8%E6%80%81SQL%E8%AF%AD%E5%8F%A5%E5%88%86%E6%9E%90/">动态SQL语句分析</a>，在解析sql标签的时候就可以初步看到两者的区别了，XMLScriptBuilder执行parseDynamicTags方法的时候，具体实现参考源代码：</p>
+<pre><code>List&lt;SqlNode&gt; parseDynamicTags(XNode node) {
+    List&lt;SqlNode&gt; contents = new ArrayList&lt;SqlNode&gt;();
+    NodeList children = node.getNode().getChildNodes();
+    for (int i = 0; i &lt; children.getLength(); i++) {
+      XNode child = node.newXNode(children.item(i));
+      if (child.getNode().getNodeType() == Node.CDATA_SECTION_NODE || child.getNode().getNodeType() == Node.TEXT_NODE) {
+        String data = child.getStringBody(&quot;&quot;);
+        TextSqlNode textSqlNode = new TextSqlNode(data);
+        //如果包含${}表达式会先检查，如果有就使用TextSqlNode，否则StaticTextSqlNode
+        if (textSqlNode.isDynamic()) {
+          contents.add(textSqlNode);
+          isDynamic = true;
+        } else {
+            //解析之后最终的SqlNode为StaticTextSqlNode
+          contents.add(new StaticTextSqlNode(data));
+        }
+      } else if (child.getNode().getNodeType() == Node.ELEMENT_NODE) { // issue #628
+        String nodeName = child.getNode().getNodeName();
+        NodeHandler handler = nodeHandlers(nodeName);
+        if (handler == null) {
+          throw new BuilderException(&quot;Unknown element &lt;&quot; + nodeName + &quot;&gt; in SQL statement.&quot;);
+        }
+        //动态sql封装
+        handler.handleNode(child, contents);
+        isDynamic = true;
+      }
+    }
+    return contents;
+}</code></pre><p>注意<strong>textSqlNode.isDynamic()</strong>这个判断，解析到xml的文本时，每次都要去判断是不是动态的，判断的依据就是文本SQL语句中是否包含${…}表达式，参考TextSqlNode的isDynamic方法：</p>
+<pre><code>public boolean isDynamic() {
+    DynamicCheckerTokenParser checker = new DynamicCheckerTokenParser();
+    GenericTokenParser parser = createParser(checker);
+    //有${}占位符的就是动态语句，GenericTokenParser解析的时候，就用handleToken方法处理
+    //DynamicCheckerTokenParser实现了TokenHandler接口，handleToken方法就把isDynamic的值设置为true
+    parser.parse(text);
+    return checker.isDynamic();
+}</code></pre><p>最终有${}表达式的文本节点会保存到TextSqlNode，而#{}表达式的文本节点保存到StaticTextSqlNode，打开源代码看StaticTextSqlNode除了拼接sql时调用了DynamicContext的appendSql方法其他什么事情也没做。上面的步骤只是在解析xml节点，还没有真正生成可执行的SQL语句，参考动态SQL语句分析的章节的uml就一目了然了。</p>
+<p>解析后完sql语句的xml节点最终都会保存到MixedSqlNode，不管是动态SQL语句还是静态SQL语句，在执行的时候，都要执行MixedSqlNode.apply(dynamicContext)方法去生成可执行的SQL语句。mybatis也提供了LanguageDriver接口，可以实现自定义解析xml的实现，如使用Velocity、FreeMarker等。</p>
+<p>DynamicSqlSource或者RawSqlSource拼接sql语句时，执行MixedSqlNode.apply(dynamicContext)方法，把保存的所有节点循环执行，如前面所诉，包含${…}表达式的会使用TextSqlNode.apply()执行，参考源代码：</p>
+<pre><code>@Override
+public boolean apply(DynamicContext context) {
+    GenericTokenParser parser = createParser(new BindingTokenParser(context, injectionFilter));
+    context.appendSql(parser.parse(text));
+    return true;
+}</code></pre><p>在解析文本的时候，TextSqlNode中有个内部类BindingTokenParser，这个类就负责把${}表达式替换成具体的值，也就是说在拼接SQL的时候就把值传进去了，参考BindingTokenParser.handleToken方法：</p>
+<pre><code>@Override
+public String handleToken(String content) {
+  Object parameter = context.getBindings().get(&quot;_parameter&quot;);
+  if (parameter == null) {
+    context.getBindings().put(&quot;value&quot;, null);
+  } else if (SimpleTypeRegistry.isSimpleType(parameter.getClass())) {
+    context.getBindings().put(&quot;value&quot;, parameter);
+  }
+  Object value = OgnlCache.getValue(content, context.getBindings());
+  String srtValue = (value == null ? &quot;&quot; : String.valueOf(value)); // issue #274 return &quot;&quot; instead of &quot;null&quot;
+  checkInjection(srtValue);
+  return srtValue;
+}</code></pre><p>底层使用的OGNL表达式获取到具体的值，SQL入侵问题就出现在这里，表达式中的值可以写入类似or 1=1这种SQL片段，而使用#{}表达式的文本节点包含到StaticTextSqlNode，查看StaticTextSqlNode的apply方法，其实什么事情都没有做，只是一个拼接SQL字符串就没做其他事情了，然后由SqlSourceBuilder的内部类ParameterMappingTokenHandler将#{}替换成？占位符，最终参数中的各种handler将参数设值到PreparedStatement。更直观一点的方式就是查看执行前的SQL是什么样子的，在PreparedStatementHandler实例化statement的时候可以把SQL打印出来，参考源代码：</p>
+<pre><code>@Override
+protected Statement instantiateStatement(Connection connection) throws SQLException {
+  log.debug(&quot;statement：预处理，获取sql并返回Statement&quot;);
+    String sql = boundSql.getSql();
+    log.debug(&quot;statement：sql语句为 &quot; + boundSql.getSql());
+    if (mappedStatement.getKeyGenerator() instanceof Jdbc3KeyGenerator) {
+      String[] keyColumnNames = mappedStatement.getKeyColumns();
+      if (keyColumnNames == null) {
+        return connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
+      } else {
+        return connection.prepareStatement(sql, keyColumnNames);
+      }
+    } else if (mappedStatement.getResultSetType() != null) {
+      return connection.prepareStatement(sql, mappedStatement.getResultSetType().getValue(), ResultSet.CONCUR_READ_ONLY);
+    } else {
+      return connection.prepareStatement(sql);
+    }
+}</code></pre><p>简单的一句话总结就是，${}表达式是一个字符串截取，在sql执行前会被参数值替换，而#{}表达式只是把里面的参数替换成问号（?）。<br>mybatis针对${}入侵也有具体措施，参考<a href="https://github.com/mybatis/mybatis-3/issues/117" target="_blank" rel="noopener">issues 117</a>，但是在最新版中的Configuration也没有setInjectionFilterEnabled、setInjectionFilter方法，反正不到万不得已，千万别使用${}表达式，最后引用mybatis wiki上面的的一句话：</p>
+<blockquote>
+<p>Important: note that use of ${…} (string substitution) presents a risk for SQL injection attacks. Also, string substitution can be problematical for complex types like dates. For these reasons, we recommend using the #{…} form whenever possible.</p>
+</blockquote>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/mybatis/">mybatis</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/mybatis/">mybatis</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://zeng233.github.io/2015/10/15/2.6mybatis%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8Bsql%E8%AF%AD%E5%8F%A5%E4%B8%AD%E8%A1%A8%E8%BE%BE%E5%BC%8F%E5%88%86%E6%9E%90/" data-title="mybatis源码分析之sql语句中#{}与${}表达式分析 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2015/10/20/2.7mybatis源码分析之Nested Select、Nested Results以及N+1问题分析/" title="mybatis源码分析之Nested Select、Nested Results以及N+1问题分析">
+  <strong>上一篇：</strong><br/>
+  <span>
+  mybatis源码分析之Nested Select、Nested Results以及N+1问题分析</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2015/10/07/2.5mybatis源码分析之反射包分析/"  title="mybatis源码分析之反射包分析">
+ <strong>下一篇：</strong><br/> 
+ <span>mybatis源码分析之反射包分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/10/15/2.6mybatis源码分析之sql语句中表达式分析/" data-title="mybatis源码分析之sql语句中#{}与${}表达式分析" data-url="http://zeng233.github.io/2015/10/15/2.6mybatis%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8Bsql%E8%AF%AD%E5%8F%A5%E4%B8%AD%E8%A1%A8%E8%BE%BE%E5%BC%8F%E5%88%86%E6%9E%90/"></div>
+</section>
+
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ 
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="github-card">
+<p class="asidetitle">Github 名片</p>
+<div class="github-card" data-github="zeng233" data-theme="medium"></div>
+<script type="text/javascript" src="//cdn.jsdelivr.net/github-cards/latest/widget.js" ></script>
+</div>
+
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java-SE/" title="Java SE">Java SE<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/programming-road/" title="programming road">programming road<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/spring/" title="spring">spring<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/concurrent/" title="concurrent">concurrent<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/coding/" title="coding">coding<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IoC/" title="IoC">IoC<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://coolshell.cn/" target="_blank" title="酷壳">酷壳</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm.taobao.org/" target="_blank" title="阿里中间件团队博客">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://martinfowler.com/" target="_blank" title="Martin Fowler&#39;s Blog">Martin Fowler&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://gee.cs.oswego.edu/" target="_blank" title="Doug Lea&#39;s Blog">Doug Lea&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://stackoverflow.com/" target="_blank" title="StackOverflow">StackOverflow</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=2043260800&verifier=b3593ceb&dpc=1"></iframe>
+</div>
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> If you work hard, you will be successful! <br/>
+			This is my blog,believe it or not.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2043260800" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/zeng233" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		<a href="http://stackoverflow.com/users/4250881" target="_blank" class="icon-stack-overflow" title="stackoverflow"></a>
+		
+		
+		<a href="https://twitter.com/zeng233" target="_blank" class="icon-twitter" title="twitter"></a>
+		
+		
+		<a href="https://www.facebook.com/hua.zeng.545" target="_blank" class="icon-facebook" title="facebook"></a>
+		
+		
+		<a href="https://www.linkedin.com/in/zeng-hua-b3314978" target="_blank" class="icon-linkedin" title="linkedin"></a>
+		
+		
+		
+		<a href="http://www.zhihu.com/people/zhu-lin-xian-ren" target="_blank" class="icon-zhihu" title="知乎"></a>
+		
+		
+		<a href="https://plus.google.com/106512881304692844041?rel=author" target="_blank" class="icon-google_plus" title="Google+"></a>
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2023 
+		
+		<a href="/about" target="_blank" title="竹林闲人">竹林闲人</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"zeng233"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?e6d1f421bbc9962127a50488f9ed37d1";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

@@ -1,0 +1,760 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>spring源码分析之MVC简介 | DukeZeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="竹林闲人">
+    
+
+    
+    <meta name="description" content="简介springMVC遵循OCP（Open-Closed Principle，开放封闭原则）而实现MVC，平时项目要做某部分特殊功能时，只要实现相应的接口就可以了，非常灵活也易于扩展，MVC模型在JEE平台中属于描述层，JEE将MVC细分了更多的模式，后面有时间了再分析JEE模式在spring中如何实现的，这里做个大概的介绍。spring MVC模型如下：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring源码分析之MVC简介">
+<meta property="og:url" content="http://zeng233.github.io/2016/10/20/6.6spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BMVC%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="DukeZeng">
+<meta property="og:description" content="简介springMVC遵循OCP（Open-Closed Principle，开放封闭原则）而实现MVC，平时项目要做某部分特殊功能时，只要实现相应的接口就可以了，非常灵活也易于扩展，MVC模型在JEE平台中属于描述层，JEE将MVC细分了更多的模式，后面有时间了再分析JEE模式在spring中如何实现的，这里做个大概的介绍。spring MVC模型如下：">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-1.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-2.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-3.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-4.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-5.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-6.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-7.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-8.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-9.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/5-10.png">
+<meta property="article:published_time" content="2016-10-20T04:33:19.000Z">
+<meta property="article:modified_time" content="2016-10-20T13:05:06.000Z">
+<meta property="article:author" content="竹林闲人">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zeng233.github.io/images/spring/5-1.png">
+<meta name="twitter:creator" content="@zeng233">
+<link rel="publisher" href="106512881304692844041">
+
+    
+    <link rel="alternative" href="/atom.xml" title="DukeZeng" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/duke.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/%02.css">
+<link rel="stylesheet" href="/.css">
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="DukeZeng">DukeZeng</a></h1>
+				<h2 class="blog-motto">竹林闲人的博客</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于我</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:zeng233.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/10/20/6.6spring源码分析之MVC分析/" title="spring源码分析之MVC简介" itemprop="url">spring源码分析之MVC简介</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
+		
+  <p class="article-time">
+    <time datetime="2016-10-20T04:33:19.000Z" itemprop="datePublished"> 发表于 2016-10-20</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#简介"><span class="toc-number">1.</span> <span class="toc-text">简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#前端控制器DispatcherServlet各个组件"><span class="toc-number">2.</span> <span class="toc-text">前端控制器DispatcherServlet各个组件</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#HandlerMapping"><span class="toc-number">2.1.</span> <span class="toc-text">HandlerMapping</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HandlerAdapter"><span class="toc-number">2.2.</span> <span class="toc-text">HandlerAdapter</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Resolving-views"><span class="toc-number">2.3.</span> <span class="toc-text">Resolving views</span></a></li></ol></li></ol>
+		
+		</div>
+		
+		<h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>springMVC遵循OCP（Open-Closed Principle，开放封闭原则）而实现MVC，平时项目要做某部分特殊功能时，只要实现相应的接口就可以了，非常灵活也易于扩展，MVC模型在JEE平台中属于描述层，JEE将MVC细分了更多的模式，后面有时间了再分析JEE模式在spring中如何实现的，这里做个大概的介绍。spring MVC模型如下：</p>
+<a id="more"></a>
+<!-- --- -->
+
+<p><img src="/images/spring/5-1.png" alt></p>
+<p>spring通过DispatcherServlet（<a href="http://www.oracle.com/technetwork/java/frontcontroller-135648.html" target="_blank" rel="noopener">Front Controller</a>，前端控制器模式）将各个层分离，各司其职，模块之间更易于扩展。为什么要用Front Controller？这个控制器就主要绑定映射、视图解析、异常处理、请求调用等待，如果没有这层，经常会有一个功能的增删改查，每个控制层就要去写一次增删改查的判断，现在servlet3以上版本支持注解了解决了这个问题，但是每个方法里面还是有视图层耦合，前端控制器模式就很好的解决了这些问题。</p>
+<p>参考<a href="http://zeng233.github.io/2016/09/04/6.1spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BIoc%E5%AE%B9%E5%99%A8%E5%88%86%E6%9E%90/">《spring源码分析之Ioc容器分析》</a>，整个MVC相关的bean控制由XmlWebApplicationContext，一般项目里面对bean的配置有两种，参考下图：</p>
+<p><img src="/images/spring/5-2.png" alt></p>
+<p>这种配置是将web Ioc容器与应用的父级容器分离，这种方式如果没配置好，有时候会遇到一些问题，如事务失效、aop不起作用等等，大多数都是bean不在相应的IoC容器中造成的。</p>
+<p><img src="/images/spring/5-3.png" alt></p>
+<p>这种方式就是将web 中的bean和父级bean融合在一个容器中了。</p>
+<h1 id="前端控制器DispatcherServlet各个组件"><a href="#前端控制器DispatcherServlet各个组件" class="headerlink" title="前端控制器DispatcherServlet各个组件"></a>前端控制器DispatcherServlet各个组件</h1><p>DispatcherServlet在前面说了，作为web应用的入口点，控制着整个请求流程，大概包含了如下组件：</p>
+<p><img src="/images/spring/5-4.png" alt></p>
+<p>DispatcherServlet初始化以及分发请求的大致流程如下：</p>
+<p><img src="/images/spring/5-5.png" alt></p>
+<h2 id="HandlerMapping"><a href="#HandlerMapping" class="headerlink" title="HandlerMapping"></a>HandlerMapping</h2><p>如上图所示，在DispatcherServlet初始化的时候，做了很多初始化工作，这就包含请求地址与应用层的Controller绑定了，HandlerMapping的类图如下：</p>
+<p><img src="/images/spring/5-6.png" alt></p>
+<p>可以看到具体的实现类实现了InitializingBean接口，在初始化的时候就要执行afterPropertiesSet，这个方法就是绑定映射了，以RequestMappingHandlerMapping为例，执行流程如下：</p>
+<p><img src="/images/spring/5-7.png" alt></p>
+<h2 id="HandlerAdapter"><a href="#HandlerAdapter" class="headerlink" title="HandlerAdapter"></a>HandlerAdapter</h2><p>这层主要将请求处理完（包含请求数据绑定）之后的结果返回给DispatcherServlet，再由视图解析器根据结果进行视图渲染。<br>在DispatcherServlet分发请求的时候会执行doDispatch方法：</p>
+<pre><code>protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    。。。
+    // Determine handler adapter for the current request.
+    HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+    // Process last-modified header, if supported by the handler.
+    String method = request.getMethod();
+    boolean isGet = &quot;GET&quot;.equals(method);
+    if (isGet || &quot;HEAD&quot;.equals(method)) {
+        long lastModified = ha.getLastModified(request, mappedHandler.getHandler());
+        if (logger.isDebugEnabled()) {
+            logger.debug(&quot;Last-Modified value for [&quot; + getRequestUri(request) + &quot;] is: &quot; + lastModified);
+        }
+        if (new ServletWebRequest(request, response).checkNotModified(lastModified) &amp;&amp; isGet) {
+            return;
+        }
+    }
+
+    //执行链执行拦截器HandlerInterceptor.preHandle
+    if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+        return;
+    }
+
+    // Actually invoke the handler.
+    //这时HandlerExecutionChain的handler对象为url映射的HandlerMethod
+    mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+
+    if (asyncManager.isConcurrentHandlingStarted()) {
+        return;
+    }
+
+    applyDefaultViewName(processedRequest, mv);
+    //请求执行完后拦截器再处理
+    mappedHandler.applyPostHandle(processedRequest, response, mv);
+    。。。
+}</code></pre><p>以RequestMappingHandlerAdapter为例，执行流程如下：</p>
+<p><img src="/images/spring/5-8.png" alt></p>
+<p>最后参数绑定就在DataBinder类执行了，如下所示：</p>
+<pre><code>protected AbstractPropertyBindingResult createBeanPropertyBindingResult() {
+    BeanPropertyBindingResult result = new BeanPropertyBindingResult(getTarget(),
+            getObjectName(), isAutoGrowNestedPaths(), getAutoGrowCollectionLimit());
+    if (this.conversionService != null) {
+        result.initConversion(this.conversionService);
+    }
+    return result;
+}</code></pre><p>参数转换的时候也用的BeanWrapper来封装的，绑定完参数就执行方法了，因为容器启动的时候就把相关的url绑定到具体的方法了，所以这里利用反射直接调用方法执行了，参考InvocableHandlerMethod：</p>
+<pre><code>public Object invokeForRequest(NativeWebRequest request, ModelAndViewContainer mavContainer,
+        Object... providedArgs) throws Exception {
+
+    //获取解析类处理后的方法参数
+    Object[] args = getMethodArgumentValues(request, mavContainer, providedArgs);
+    if (logger.isTraceEnabled()) {
+        StringBuilder sb = new StringBuilder(&quot;Invoking [&quot;);
+        sb.append(getBeanType().getSimpleName()).append(&quot;.&quot;);
+        sb.append(getMethod().getName()).append(&quot;] method with arguments &quot;);
+        sb.append(Arrays.asList(args));
+        logger.trace(sb.toString());
+    }
+    //执行requestMapping绑定的方法
+    Object returnValue = doInvoke(args);
+    if (logger.isTraceEnabled()) {
+        logger.trace(&quot;Method [&quot; + getMethod().getName() + &quot;] returned [&quot; + returnValue + &quot;]&quot;);
+    }
+    return returnValue;
+}</code></pre><p>然后在ServletInvocableHandlerMethod把返回的结果用returnValueHandler把视图以及Model的设置到ModelAndViewContainer。最后在RequestMappingHandlerAdapter生成ModelAndView对象：</p>
+<pre><code>private ModelAndView getModelAndView(ModelAndViewContainer mavContainer,
+        ModelFactory modelFactory, NativeWebRequest webRequest) throws Exception {
+
+    modelFactory.updateModel(webRequest, mavContainer);
+    if (mavContainer.isRequestHandled()) {
+        return null;
+    }
+    ModelMap model = mavContainer.getModel();
+    ModelAndView mav = new ModelAndView(mavContainer.getViewName(), model);
+    if (!mavContainer.isViewReference()) {
+        mav.setView((View) mavContainer.getView());
+    }
+    if (model instanceof RedirectAttributes) {
+        Map&lt;String, ?&gt; flashAttributes = ((RedirectAttributes) model).getFlashAttributes();
+        HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
+        RequestContextUtils.getOutputFlashMap(request).putAll(flashAttributes);
+    }
+    return mav;
+}</code></pre><h2 id="Resolving-views"><a href="#Resolving-views" class="headerlink" title="Resolving views"></a>Resolving views</h2><p>视图解析有两个重要的接口ViewResolver（解析指定标示的视图）和View（把视图结果写到HttpServletResponse返回给客户端）。<br>又回到DispatcherServlet，把返回的ModelAndView交给processDispatchResult处理，里面的解析器在配置文件加载的时候就初始化好了，如果需要解析自定义的视图，只要实现ViewResolver即可。spring内部也提供了大量的视图解析器，如下图：</p>
+<p><img src="/images/spring/5-9.png" alt></p>
+<p>解析完文件就会生成相应的视图，spring内部的视图如下：</p>
+<p><img src="/images/spring/5-10.png" alt></p>
+<p>jsp解析器对应的视图就为InternalResourceView，渲染结果如下：</p>
+<pre><code>protected void renderMergedOutputModel(
+        Map&lt;String, Object&gt; model, HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+    // Expose the model object as request attributes.
+    exposeModelAsRequestAttributes(model, request);
+
+    // Expose helpers as request attributes, if any.
+    exposeHelpers(request);
+
+    // Determine the path for the request dispatcher.
+    String dispatcherPath = prepareForRendering(request, response);
+
+    // Obtain a RequestDispatcher for the target resource (typically a JSP).
+    RequestDispatcher rd = getRequestDispatcher(request, dispatcherPath);
+    if (rd == null) {
+        throw new ServletException(&quot;Could not get RequestDispatcher for [&quot; + getUrl() +
+                &quot;]: Check that the corresponding file exists within your web application archive!&quot;);
+    }
+
+    // If already included or response already committed, perform include, else forward.
+    if (useInclude(request, response)) {
+        response.setContentType(getContentType());
+        if (logger.isDebugEnabled()) {
+            logger.debug(&quot;Including resource [&quot; + getUrl() + &quot;] in InternalResourceView &apos;&quot; + getBeanName() + &quot;&apos;&quot;);
+        }
+        rd.include(request, response);
+    }
+
+    else {
+        // Note: The forwarded resource is supposed to determine the content type itself.
+        if (logger.isDebugEnabled()) {
+            logger.debug(&quot;Forwarding to resource [&quot; + getUrl() + &quot;] in InternalResourceView &apos;&quot; + getBeanName() + &quot;&apos;&quot;);
+        }
+        rd.forward(request, response);
+    }
+}</code></pre><p>如果是ajax异步请求，在处理返回结果的时候就已经处理了，ModelAndViewContainer设置属性requestHandled为true，表示已经处理了，spring3以上支持很多注解，异步返回使用@ResponseBody注解，就使用RequestResponseBodyMethodProcessor处理返回结果。spring4.2以上默认使用jackson和gson解析json格式的返回类型，参考AnnotationDrivenBeanDefinitionParser：</p>
+<pre><code>private Properties getDefaultMediaTypes() {
+        Properties props = new Properties();
+        if (romePresent) {
+            props.put(&quot;atom&quot;, MediaType.APPLICATION_ATOM_XML_VALUE);
+            props.put(&quot;rss&quot;, &quot;application/rss+xml&quot;);
+        }
+        if (jaxb2Present || jackson2XmlPresent) {
+            props.put(&quot;xml&quot;, MediaType.APPLICATION_XML_VALUE);
+        }
+        if (jackson2Present || gsonPresent) {
+            props.put(&quot;json&quot;, MediaType.APPLICATION_JSON_VALUE);
+        }
+        return props;
+    }</code></pre><p>springMVC的大致流程就分析完了，从以上分析可以看出，spring严格按照OCP、SRP（单一责任原则）实现，各个模块各司其职，降低了耦合度，扩展也很方便。有些涉及到具体细节没有详细分析，后面针对具体复杂点的业务再详细说明。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/spring/">spring</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/spring/">spring</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://zeng233.github.io/2016/10/20/6.6spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BMVC%E5%88%86%E6%9E%90/" data-title="spring源码分析之MVC简介 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/11/02/6.7spring MVC处理Excel视图的三种方式/" title="spring MVC处理Excel视图的三种方式">
+  <strong>上一篇：</strong><br/>
+  <span>
+  spring MVC处理Excel视图的三种方式</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/10/08/6.4spring事务失效常见问题分析/"  title="spring事务失效常见问题分析">
+ <strong>下一篇：</strong><br/> 
+ <span>spring事务失效常见问题分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/10/20/6.6spring源码分析之MVC分析/" data-title="spring源码分析之MVC简介" data-url="http://zeng233.github.io/2016/10/20/6.6spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BMVC%E5%88%86%E6%9E%90/"></div>
+</section>
+
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#简介"><span class="toc-number">1.</span> <span class="toc-text">简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#前端控制器DispatcherServlet各个组件"><span class="toc-number">2.</span> <span class="toc-text">前端控制器DispatcherServlet各个组件</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#HandlerMapping"><span class="toc-number">2.1.</span> <span class="toc-text">HandlerMapping</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HandlerAdapter"><span class="toc-number">2.2.</span> <span class="toc-text">HandlerAdapter</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Resolving-views"><span class="toc-number">2.3.</span> <span class="toc-text">Resolving views</span></a></li></ol></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="github-card">
+<p class="asidetitle">Github 名片</p>
+<div class="github-card" data-github="zeng233" data-theme="medium"></div>
+<script type="text/javascript" src="//cdn.jsdelivr.net/github-cards/latest/widget.js" ></script>
+</div>
+
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java-SE/" title="Java SE">Java SE<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/programming-road/" title="programming road">programming road<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/spring/" title="spring">spring<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/concurrent/" title="concurrent">concurrent<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/coding/" title="coding">coding<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IoC/" title="IoC">IoC<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://coolshell.cn/" target="_blank" title="酷壳">酷壳</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm.taobao.org/" target="_blank" title="阿里中间件团队博客">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://martinfowler.com/" target="_blank" title="Martin Fowler&#39;s Blog">Martin Fowler&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://gee.cs.oswego.edu/" target="_blank" title="Doug Lea&#39;s Blog">Doug Lea&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://stackoverflow.com/" target="_blank" title="StackOverflow">StackOverflow</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=2043260800&verifier=b3593ceb&dpc=1"></iframe>
+</div>
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> If you work hard, you will be successful! <br/>
+			This is my blog,believe it or not.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2043260800" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/zeng233" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		<a href="http://stackoverflow.com/users/4250881" target="_blank" class="icon-stack-overflow" title="stackoverflow"></a>
+		
+		
+		<a href="https://twitter.com/zeng233" target="_blank" class="icon-twitter" title="twitter"></a>
+		
+		
+		<a href="https://www.facebook.com/hua.zeng.545" target="_blank" class="icon-facebook" title="facebook"></a>
+		
+		
+		<a href="https://www.linkedin.com/in/zeng-hua-b3314978" target="_blank" class="icon-linkedin" title="linkedin"></a>
+		
+		
+		
+		<a href="http://www.zhihu.com/people/zhu-lin-xian-ren" target="_blank" class="icon-zhihu" title="知乎"></a>
+		
+		
+		<a href="https://plus.google.com/106512881304692844041?rel=author" target="_blank" class="icon-google_plus" title="Google+"></a>
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2023 
+		
+		<a href="/about" target="_blank" title="竹林闲人">竹林闲人</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"zeng233"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?e6d1f421bbc9962127a50488f9ed37d1";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

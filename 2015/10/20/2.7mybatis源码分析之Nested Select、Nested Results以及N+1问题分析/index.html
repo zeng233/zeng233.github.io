@@ -1,0 +1,791 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>mybatis源码分析之Nested Select、Nested Results以及N+1问题分析 | DukeZeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="竹林闲人">
+    
+
+    
+    <meta name="description" content="官方文档介绍ResultMap标签时，用了比较大的篇幅说明这个属性的强大与重要性，但也是最复杂的：  The resultMap element is the most important and powerful element in MyBatis. It’s what allows you to do away with 90% of the code that JDBC requires">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mybatis源码分析之Nested Select、Nested Results以及N+1问题分析">
+<meta property="og:url" content="http://zeng233.github.io/2015/10/20/2.7mybatis%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BNested%20Select%E3%80%81Nested%20Results%E4%BB%A5%E5%8F%8AN+1%E9%97%AE%E9%A2%98%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="DukeZeng">
+<meta property="og:description" content="官方文档介绍ResultMap标签时，用了比较大的篇幅说明这个属性的强大与重要性，但也是最复杂的：  The resultMap element is the most important and powerful element in MyBatis. It’s what allows you to do away with 90% of the code that JDBC requires">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://zeng233.github.io/images/mybatis/8-1.png">
+<meta property="article:published_time" content="2015-10-20T01:12:22.000Z">
+<meta property="article:modified_time" content="2016-02-20T04:12:22.000Z">
+<meta property="article:author" content="竹林闲人">
+<meta property="article:tag" content="mybatis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zeng233.github.io/images/mybatis/8-1.png">
+<meta name="twitter:creator" content="@zeng233">
+<link rel="publisher" href="106512881304692844041">
+
+    
+    <link rel="alternative" href="/atom.xml" title="DukeZeng" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/duke.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/%02.css">
+<link rel="stylesheet" href="/.css">
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="DukeZeng">DukeZeng</a></h1>
+				<h2 class="blog-motto">竹林闲人的博客</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于我</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:zeng233.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/10/20/2.7mybatis源码分析之Nested Select、Nested Results以及N+1问题分析/" title="mybatis源码分析之Nested Select、Nested Results以及N+1问题分析" itemprop="url">mybatis源码分析之Nested Select、Nested Results以及N+1问题分析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
+		
+  <p class="article-time">
+    <time datetime="2015-10-20T01:12:22.000Z" itemprop="datePublished"> 发表于 2015-10-20</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#ResultMap-demo分析"><span class="toc-number">1.</span> <span class="toc-text">ResultMap demo分析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Nested-Select分析"><span class="toc-number">1.1.</span> <span class="toc-text">Nested Select分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Nested-Results分析"><span class="toc-number">1.2.</span> <span class="toc-text">Nested Results分析</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#解析resultMap标签源码分析"><span class="toc-number">2.</span> <span class="toc-text">解析resultMap标签源码分析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Nested-Select的结果集处理"><span class="toc-number">2.1.</span> <span class="toc-text">Nested Select的结果集处理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Nested-Results的结果集处理"><span class="toc-number">2.2.</span> <span class="toc-text">Nested Results的结果集处理</span></a></li></ol></li></ol>
+		
+		</div>
+		
+		<p>官方文档介绍ResultMap标签时，用了比较大的篇幅说明这个属性的强大与重要性，但也是最复杂的：</p>
+<blockquote>
+<p>The resultMap element is the most important and powerful element in MyBatis. It’s what allows you to do away with 90% of the code that JDBC requires to retrieve data from ResultSets, and in some cases allows you to do things that JDBC does not even support. In fact, to write the equivalent code for something like a join mapping for a complex statement could probably span thousands of lines of code. The design of the ResultMaps is such that simple statements don’t require explicit result mappings at all, and more complex statements require no more than is absolutely necessary to describe the relationships.</p>
+</blockquote>
+<blockquote>
+<p><strong>Advanced Result Maps</strong><br>MyBatis was created with one idea in mind: Databases aren’t always what you want or need them to be. While we’d love every database to be perfect 3rd normal form or BCNF, they aren’t. And it would be great if it was possible to have a single database map perfectly to all of the applications that use it, it’s not. Result Maps are the answer that MyBatis provides to this problem.</p>
+</blockquote>
+<a id="more"></a>
+<!-- --- -->
+
+<p>从上面可以了解到ResultMap牛X的一点就是让结果集实现<a href="https://www.zhihu.com/question/24696366" target="_blank" rel="noopener">3NF</a>，又要去翻书了o(╯□╰)o。mybatis映射结果集有两种形式，第一种使用resultType属性，其值为结果集类的别名或者全路径的类名，第二种为resultMap,其值为mapper.xml中<resultMap>标签的引用（用的id去标识），两种形式不能同时出现。resultType就直接和类映射就完了，比较简单不做太多分析，后面主要重点分析resultMap标签。<br>resultMap也包含多个内嵌标签：</resultMap></p>
+<ul>
+<li>constructor 构造器注入</li>
+<li>id 结果集的唯一标示，一般用主键，提高性能</li>
+<li>result 对应column属性</li>
+<li>association 一对一实体关联属性，针对单个实体 </li>
+<li>collection 一对多实体管理属性，针对集合</li>
+<li>discriminator 结果集鉴别起，类似于SQL的when case功能</li>
+<li>extends mybatis3以上也支持继承resultMap</li>
+</ul>
+<h1 id="ResultMap-demo分析"><a href="#ResultMap-demo分析" class="headerlink" title="ResultMap demo分析"></a>ResultMap demo分析</h1><p>针对关联查询，使用resultMap标签处理结果集会有两种方式：<br><strong>Nested Select</strong>：关联查询分成多条SQL执行，然后把关联表的结果集依次返回来（嵌套层级递推结果集）<br><strong>Nested Results</strong>：一条关联SQL执行，然后结果集由resultMap映射处理<br>这两种处理方式，上面的引用也说明了不用定义额外的结果集映射，只要在实体里面配置好映射关系即可。</p>
+<h2 id="Nested-Select分析"><a href="#Nested-Select分析" class="headerlink" title="Nested Select分析"></a>Nested Select分析</h2><p>以blog、Author一对一关系为例分析：</p>
+<pre><code>&lt;resultMap id=&quot;resultBlog&quot; type=&quot;atest.reopen.session.nestedResult.blog.Blog&quot;&gt;
+    &lt;id property=&quot;id&quot; column=&quot;idBlog&quot; /&gt;
+    &lt;result property=&quot;name&quot; column=&quot;blogname&quot; /&gt;
+    &lt;result property=&quot;url&quot; column=&quot;blogurl&quot; /&gt;
+    &lt;association property=&quot;author&quot; column=&quot;idBlog&quot; javaType=&quot;atest.reopen.session.nestedResult.blog.Author&quot; select=&quot;selectAuthor&quot; /&gt;
+    &lt;collection property=&quot;posts&quot; column=&quot;idBlog&quot; javaType=&quot;ArrayList&quot;
+        ofType=&quot;atest.reopen.session.nestedResult.blog.Post&quot; select=&quot;selectPosts&quot;/&gt;
+&lt;/resultMap&gt;
+&lt;select id=&quot;selectAuthor&quot; parameterType=&quot;int&quot; resultType=&quot;atest.reopen.session.nestedResult.blog.Author&quot;&gt;
+    SELECT idAuthor as id, name, email FROM t_AUTHOR WHERE idBlog = #{idBlog}
+&lt;/select&gt;
+&lt;select id=&quot;selectBlog&quot; resultMap=&quot;resultBlog&quot;&gt;
+    SELECT idBlog, name as blogname, url as blogurl FROM t_BLOG
+&lt;/select&gt;</code></pre><p>当表中数据量非常大时，这种方式就非常悲剧了，当一条SQL查询出多条Blog时，还要用成千上万的外键id去查询Author，这样会执行很多查询语句造成性能非常差，造成了N+1问题，虽然mybatis有延时加载功能可以减少点SQL语句执行，但是项目中不推荐使用这种。nested result就是对这种查询的改进，用SQL去关联查询，而不是在resultMap标签中通过select去执行SQL关联。</p>
+<h2 id="Nested-Results分析"><a href="#Nested-Results分析" class="headerlink" title="Nested Results分析"></a>Nested Results分析</h2><pre><code>&lt;resultMap id=&quot;resultBlog&quot; type=&quot;atest.reopen.session.nestedResult.blog.Blog&quot;&gt;
+    &lt;id property=&quot;id&quot; column=&quot;idBlog&quot; /&gt;
+    &lt;result property=&quot;name&quot; column=&quot;blogName&quot; /&gt;
+    &lt;result property=&quot;url&quot; column=&quot;url&quot; /&gt;
+    &lt;association property=&quot;author&quot; column=&quot;idBlog&quot; javaType=&quot;atest.reopen.session.nestedResult.blog.Author&quot;&gt;
+        &lt;id property=&quot;id&quot; column=&quot;idAuthor&quot; /&gt;
+        &lt;result property=&quot;name&quot; column=&quot;authorName&quot; /&gt;
+        &lt;result property=&quot;email&quot; column=&quot;email&quot; /&gt;
+    &lt;/association&gt;
+    &lt;collection property=&quot;posts&quot; column=&quot;idBlog&quot; javaType=&quot;ArrayList&quot;
+        ofType=&quot;atest.reopen.session.nestedResult.blog.Post&quot;&gt;
+        &lt;id property=&quot;id&quot; column=&quot;idPost&quot; /&gt;
+        &lt;result property=&quot;title&quot; column=&quot;title&quot; /&gt;
+        &lt;collection property=&quot;tags&quot; column=&quot;idBlog&quot; javaType=&quot;ArrayList&quot;
+            ofType=&quot;atest.reopen.session.nestedResult.blog.Tag&quot;&gt;
+            &lt;id property=&quot;id&quot; column=&quot;idTag&quot; /&gt;
+            &lt;result property=&quot;value&quot; column=&quot;value&quot; /&gt;
+        &lt;/collection&gt;
+    &lt;/collection&gt;
+&lt;/resultMap&gt;
+
+&lt;select id=&quot;selectBlog&quot; resultMap=&quot;resultBlog&quot;&gt;
+    SELECT
+    B.idBlog as idBlog, B.name as blogName, B.url as url,
+    A.idAuthor as idAuthor, A.name as authorName, A.email as email ,
+    P.idPost as idPost, P.title as title,
+    T.idTag as idTag, T.value as value
+    FROM t_BLOG as B
+    left outer join t_Author A on B.idBlog = A.idBlog
+    left outer join t_Post P on P.idBlog = B.idBlog
+    left outer join t_Post_Tag PT on P.idPost = PT.idPost
+    left outer join t_Tag T on PT.idTag = T.idTag
+&lt;/select&gt;</code></pre><p>与Nested Select不同的一点就是这里只嵌入了结果集，去掉了select，这样执行一条SQL就搞定了，避免了N+1问题。不管Nested Select还是Nested Result，id属性的值最好是主键，即使有联合主键的也用主键，这样性能会更好。<br>一对多跟一对一差不多，这里不分析了，下面直接分析源代码，看内部是如何实现的。</p>
+<h1 id="解析resultMap标签源码分析"><a href="#解析resultMap标签源码分析" class="headerlink" title="解析resultMap标签源码分析"></a>解析resultMap标签源码分析</h1><p>首先XMLMapperBuilder解析resultMap标签，再遍历其子标签解析后的子标签属性都保存在ResultMapping中，有内嵌查询的其id就为命名空间+select属性的值，内嵌resultMap的id就为命名空间+子标签resultMap的Id，如果Nested Results这种方式association标签没有resultmap属性，直接用的javaType，那构造resultMap的id就由mybatis自定义生成id的方法生成，生成id的目的就是在构造最后的结果集处理的resultMap里面判断是Nested Select还是Nested Results，参考XMLMapperBuilder：</p>
+<pre><code>private String processNestedResultMappings(XNode context, List&lt;ResultMapping&gt; resultMappings) throws Exception {
+    if (&quot;association&quot;.equals(context.getName())
+        || &quot;collection&quot;.equals(context.getName())
+        || &quot;case&quot;.equals(context.getName())) {
+      if (context.getStringAttribute(&quot;select&quot;) == null) {
+    //如果不是Nest Select就构造子结果集对象的ResultMap
+        ResultMap resultMap = resultMapElement(context, resultMappings);
+        return resultMap.getId();
+      }
+    }
+    return null;
+}</code></pre><p>MapperBuilderAssistant完成子resultMap的构建：</p>
+<pre><code>public ResultMapping buildResultMapping(
+  Class&lt;?&gt; resultType,
+  String property,
+  String column,
+  Class&lt;?&gt; javaType,
+  JdbcType jdbcType,
+  String nestedSelect,
+  String nestedResultMap,
+  String notNullColumn,
+  String columnPrefix,
+  Class&lt;? extends TypeHandler&lt;?&gt;&gt; typeHandler,
+  List&lt;ResultFlag&gt; flags,
+  String resultSet,
+  String foreignColumn, 
+  boolean lazy) {
+    Class&lt;?&gt; javaTypeClass = resolveResultJavaType(resultType, property, javaType);
+    TypeHandler&lt;?&gt; typeHandlerInstance = resolveTypeHandler(javaTypeClass, typeHandler);
+    List&lt;ResultMapping&gt; composites = parseCompositeColumnName(column);
+    if (composites.size() &gt; 0) {
+      column = null;
+    }
+    ResultMapping.Builder builder = new ResultMapping.Builder(configuration, property, column, javaTypeClass);
+    builder.jdbcType(jdbcType);
+    //nestSelect
+    builder.nestedQueryId(applyCurrentNamespace(nestedSelect, true));
+    //nestResult
+    builder.nestedResultMapId(applyCurrentNamespace(nestedResultMap, true));
+    builder.resultSet(resultSet);
+    builder.typeHandler(typeHandlerInstance);
+    builder.flags(flags == null ? new ArrayList&lt;ResultFlag&gt;() : flags);
+    builder.composites(composites);
+    builder.notNullColumns(parseMultipleColumnNames(notNullColumn));
+    builder.columnPrefix(columnPrefix);
+    builder.foreignColumn(foreignColumn);
+    builder.lazy(lazy);
+    return builder.build();
+}</code></pre><p>由ResultMapResolver对resultMap进行实例化，并判断子标签是Nested Select还是Nested Results，XMLMapperBuilder在解析的时候完成：</p>
+<pre><code>private ResultMap resultMapElement(XNode resultMapNode, List&lt;ResultMapping&gt; additionalResultMappings) throws Exception {
+    。。。
+    ResultMapResolver resultMapResolver = new ResultMapResolver(builderAssistant, id, typeClass, extend, discriminator, resultMappings, autoMapping);
+    try {
+      return resultMapResolver.resolve();
+    } catch (IncompleteElementException  e) {
+      configuration.addIncompleteResultMap(resultMapResolver);
+      throw e;
+    }
+}</code></pre><p>resultMapResolver.resolve()就不贴源代码了，里面由ResultMap.build()完成一些子属性的判断以及实例化，最终构建好的ResultMap对象就被保存到Configuration对象，初始化ResultMap就完成了。</p>
+<h2 id="Nested-Select的结果集处理"><a href="#Nested-Select的结果集处理" class="headerlink" title="Nested Select的结果集处理"></a>Nested Select的结果集处理</h2><p>最后查询结果集都在DefaultResultSetHandler进行处理，由于执行的方法比较多，画时序图不怎么好看，直接上类图了，便于理解，只要是执行方法就在DefaultResultSetHandler里面依次执行，在处理结果集的时候就会判断是内嵌查询还是内嵌结果集处理，参考代码：</p>
+<pre><code>private void handleRowValues(ResultSetWrapper rsw, ResultMap resultMap, ResultHandler resultHandler, RowBounds rowBounds, ResultMapping parentMapping) throws SQLException {
+    //初始化resultMap的时候设置是否是内嵌结果集
+    if (resultMap.hasNestedResultMaps()) {
+      ensureNoRowBounds();
+      checkResultHandler();
+      handleRowValuesForNestedResultMap(rsw, resultMap, resultHandler, rowBounds, parentMapping);
+    } else {
+      handleRowValuesForSimpleResultMap(rsw, resultMap, resultHandler, rowBounds, parentMapping);
+    }
+}  </code></pre><p>如果是内嵌查询，如果要执行延时加载，mybatis全局里面要配置lazyLoadingEnabled，aggressiveLazyLoading（控制属性的延时加载），延时加载以cglib为例进行分析，如下图所示：</p>
+<p><img src="/images/mybatis/8-1.png" alt></p>
+<p>结果集就由createResultObject生成， 方法返回的resultObject就是查询后的对象，由反射累DefaultObjectFactory实现，这样结果实体即使没有定义set方法也可以设置到值，在处理每一列的时候会判断是不是嵌套查询，参考源代码：</p>
+<pre><code>private Object createResultObject(ResultSetWrapper rsw, ResultMap resultMap, ResultLoaderMap lazyLoader, String columnPrefix) throws SQLException {
+    final List&lt;Class&lt;?&gt;&gt; constructorArgTypes = new ArrayList&lt;Class&lt;?&gt;&gt;();
+    final List&lt;Object&gt; constructorArgs = new ArrayList&lt;Object&gt;();
+    final Object resultObject = createResultObject(rsw, resultMap, constructorArgTypes, constructorArgs, columnPrefix);
+    if (resultObject != null &amp;&amp; !typeHandlerRegistry.hasTypeHandler(resultMap.getType())) {
+      final List&lt;ResultMapping&gt; propertyMappings = resultMap.getPropertyResultMappings();
+      for (ResultMapping propertyMapping : propertyMappings) {
+        // issue gcode #109 &amp;&amp; issue #149
+        if (propertyMapping.getNestedQueryId() != null &amp;&amp; propertyMapping.isLazy()) {
+        //结果集对象延时加载初始化
+          return configuration.getProxyFactory().createProxy(resultObject, lazyLoader, configuration, objectFactory, constructorArgTypes, constructorArgs);
+        }
+      }
+    }
+    return resultObject;
+}</code></pre><p>如果结果集对象在执行其关联对象的属性方法时就会触发延时加载，如blog.getAuthor().getId()，就会触发EnhancedResultObjectProxyImpl类的intercept方法：</p>
+<pre><code>@Override
+public Object intercept(Object enhanced, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
+      final String methodName = method.getName();
+      try {
+        synchronized (lazyLoader) {
+          if (WRITE_REPLACE_METHOD.equals(methodName)) {
+            Object original = null;
+            if (constructorArgTypes.isEmpty()) {
+              original = objectFactory.create(type);
+            } else {
+              original = objectFactory.create(type, constructorArgTypes, constructorArgs);
+            }
+            PropertyCopier.copyBeanProperties(type, enhanced, original);
+            if (lazyLoader.size() &gt; 0) {
+              return new CglibSerialStateHolder(original, lazyLoader.getProperties(), objectFactory, constructorArgTypes, constructorArgs);
+            } else {
+              return original;
+            }
+          } else {
+            if (lazyLoader.size() &gt; 0 &amp;&amp; !FINALIZE_METHOD.equals(methodName)) {
+                log.debug(&quot;cglib：lazyLoadTriggerMethods判断是全局延时加载还是局部延时加载&quot;);
+              if (aggressive || lazyLoadTriggerMethods.contains(methodName)) {
+                lazyLoader.loadAll();
+              } else if (PropertyNamer.isProperty(methodName)) {
+                final String property = PropertyNamer.methodToProperty(methodName);
+                if (lazyLoader.hasLoader(property)) {
+                    log.debug(&quot;cglib：ResultObject调用属性的方法就开始触发延时加载&quot;);
+                  lazyLoader.load(property);
+                }
+              }
+            }
+          }
+        }
+        return methodProxy.invokeSuper(enhanced, args);
+      } catch (Throwable t) {
+        throw ExceptionUtil.unwrapThrowable(t);
+      }
+    }
+}</code></pre><p>然后在ResultLoaderMap里面重新实例化一个executor（防止线程不安全）实例化，最后由ResultLoader去完成查询，这里的ResultLoader相当于SqlSession的角色，延时加载就分析完了，所以在执行内嵌查询的时候，在mybatis的全局一定要配置lazyLoadingEnabled为true，aggressiveLazyLoading为false（局部延时加载），这样才可以减少SQL的执行。</p>
+<h2 id="Nested-Results的结果集处理"><a href="#Nested-Results的结果集处理" class="headerlink" title="Nested Results的结果集处理"></a>Nested Results的结果集处理</h2><p>如前面内嵌查询分析所示，在处理结果集有个判断，如果是内嵌结果集就由handleRowValuesForNestedResultMap方法处理了，后期有时间再补上这块的详细分析。。。<br>TODO</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/mybatis/">mybatis</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/mybatis/">mybatis</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://zeng233.github.io/2015/10/20/2.7mybatis%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BNested%20Select%E3%80%81Nested%20Results%E4%BB%A5%E5%8F%8AN+1%E9%97%AE%E9%A2%98%E5%88%86%E6%9E%90/" data-title="mybatis源码分析之Nested Select、Nested Results以及N+1问题分析 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2015/11/20/2.8mybatis源码分析之mybatis使用到的设计模式/" title="mybatis源码分析之mybatis使用到的设计模式">
+  <strong>上一篇：</strong><br/>
+  <span>
+  mybatis源码分析之mybatis使用到的设计模式</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2015/10/15/2.6mybatis源码分析之sql语句中表达式分析/"  title="mybatis源码分析之sql语句中#{}与${}表达式分析">
+ <strong>下一篇：</strong><br/> 
+ <span>mybatis源码分析之sql语句中#{}与${}表达式分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/10/20/2.7mybatis源码分析之Nested Select、Nested Results以及N+1问题分析/" data-title="mybatis源码分析之Nested Select、Nested Results以及N+1问题分析" data-url="http://zeng233.github.io/2015/10/20/2.7mybatis%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8BNested%20Select%E3%80%81Nested%20Results%E4%BB%A5%E5%8F%8AN+1%E9%97%AE%E9%A2%98%E5%88%86%E6%9E%90/"></div>
+</section>
+
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#ResultMap-demo分析"><span class="toc-number">1.</span> <span class="toc-text">ResultMap demo分析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Nested-Select分析"><span class="toc-number">1.1.</span> <span class="toc-text">Nested Select分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Nested-Results分析"><span class="toc-number">1.2.</span> <span class="toc-text">Nested Results分析</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#解析resultMap标签源码分析"><span class="toc-number">2.</span> <span class="toc-text">解析resultMap标签源码分析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Nested-Select的结果集处理"><span class="toc-number">2.1.</span> <span class="toc-text">Nested Select的结果集处理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Nested-Results的结果集处理"><span class="toc-number">2.2.</span> <span class="toc-text">Nested Results的结果集处理</span></a></li></ol></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="github-card">
+<p class="asidetitle">Github 名片</p>
+<div class="github-card" data-github="zeng233" data-theme="medium"></div>
+<script type="text/javascript" src="//cdn.jsdelivr.net/github-cards/latest/widget.js" ></script>
+</div>
+
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java-SE/" title="Java SE">Java SE<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/programming-road/" title="programming road">programming road<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/spring/" title="spring">spring<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/concurrent/" title="concurrent">concurrent<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/coding/" title="coding">coding<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IoC/" title="IoC">IoC<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://coolshell.cn/" target="_blank" title="酷壳">酷壳</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm.taobao.org/" target="_blank" title="阿里中间件团队博客">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://martinfowler.com/" target="_blank" title="Martin Fowler&#39;s Blog">Martin Fowler&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://gee.cs.oswego.edu/" target="_blank" title="Doug Lea&#39;s Blog">Doug Lea&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://stackoverflow.com/" target="_blank" title="StackOverflow">StackOverflow</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=2043260800&verifier=b3593ceb&dpc=1"></iframe>
+</div>
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> If you work hard, you will be successful! <br/>
+			This is my blog,believe it or not.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2043260800" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/zeng233" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		<a href="http://stackoverflow.com/users/4250881" target="_blank" class="icon-stack-overflow" title="stackoverflow"></a>
+		
+		
+		<a href="https://twitter.com/zeng233" target="_blank" class="icon-twitter" title="twitter"></a>
+		
+		
+		<a href="https://www.facebook.com/hua.zeng.545" target="_blank" class="icon-facebook" title="facebook"></a>
+		
+		
+		<a href="https://www.linkedin.com/in/zeng-hua-b3314978" target="_blank" class="icon-linkedin" title="linkedin"></a>
+		
+		
+		
+		<a href="http://www.zhihu.com/people/zhu-lin-xian-ren" target="_blank" class="icon-zhihu" title="知乎"></a>
+		
+		
+		<a href="https://plus.google.com/106512881304692844041?rel=author" target="_blank" class="icon-google_plus" title="Google+"></a>
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2023 
+		
+		<a href="/about" target="_blank" title="竹林闲人">竹林闲人</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"zeng233"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?e6d1f421bbc9962127a50488f9ed37d1";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>

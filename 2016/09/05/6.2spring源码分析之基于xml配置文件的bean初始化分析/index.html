@@ -1,0 +1,788 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>spring源码分析之基于xml配置文件的bean初始化分析 | DukeZeng</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="竹林闲人">
+    
+
+    
+    <meta name="description" content="spring初始化bean有xml与注解两种方式，虽然注解可以减少很多xml配置，但还是要在xml配置文件里面配置好标签之后才能生效，里面涉及到很多对xml命名空间的解析，对后面模块的分析也有帮助，所以先从xml解析初始化分析走，注解方式的注入就分析个大概了。随便吐槽下，分析开源框架最忌讳的就是陷入到分析解析xml去了，现在流行的框架差不多都会涉及到解析xml，每研究一个开源框架，分析xml都会花">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring源码分析之基于xml配置文件的bean初始化分析">
+<meta property="og:url" content="http://zeng233.github.io/2016/09/05/6.2spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8B%E5%9F%BA%E4%BA%8Exml%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%9A%84bean%E5%88%9D%E5%A7%8B%E5%8C%96%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="DukeZeng">
+<meta property="og:description" content="spring初始化bean有xml与注解两种方式，虽然注解可以减少很多xml配置，但还是要在xml配置文件里面配置好标签之后才能生效，里面涉及到很多对xml命名空间的解析，对后面模块的分析也有帮助，所以先从xml解析初始化分析走，注解方式的注入就分析个大概了。随便吐槽下，分析开源框架最忌讳的就是陷入到分析解析xml去了，现在流行的框架差不多都会涉及到解析xml，每研究一个开源框架，分析xml都会花">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/2-1.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/2-2.png">
+<meta property="og:image" content="http://zeng233.github.io/images/spring/2-3.png">
+<meta property="article:published_time" content="2016-09-05T01:22:37.000Z">
+<meta property="article:modified_time" content="2016-09-05T01:22:37.000Z">
+<meta property="article:author" content="竹林闲人">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zeng233.github.io/images/spring/2-1.png">
+<meta name="twitter:creator" content="@zeng233">
+<link rel="publisher" href="106512881304692844041">
+
+    
+    <link rel="alternative" href="/atom.xml" title="DukeZeng" type="application/atom+xml">
+    
+    
+    <link rel="icon" href="/img/duke.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/%02.css">
+<link rel="stylesheet" href="/.css">
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="DukeZeng">DukeZeng</a></h1>
+				<h2 class="blog-motto">竹林闲人的博客</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/about">关于我</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:zeng233.github.io">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/09/05/6.2spring源码分析之基于xml配置文件的bean初始化分析/" title="spring源码分析之基于xml配置文件的bean初始化分析" itemprop="url">spring源码分析之基于xml配置文件的bean初始化分析</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
+		
+  <p class="article-time">
+    <time datetime="2016-09-05T01:22:37.000Z" itemprop="datePublished"> 发表于 2016-09-05</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#初始化流程"><span class="toc-number">1.</span> <span class="toc-text">初始化流程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#初始化xml解析器"><span class="toc-number">1.1.</span> <span class="toc-text">初始化xml解析器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解析配置文件为Document对象"><span class="toc-number">1.2.</span> <span class="toc-text">解析配置文件为Document对象</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解析DOM节点"><span class="toc-number">1.3.</span> <span class="toc-text">解析DOM节点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实例化bean"><span class="toc-number">1.4.</span> <span class="toc-text">实例化bean</span></a></li></ol></li></ol>
+		
+		</div>
+		
+		<p>spring初始化bean有xml与注解两种方式，虽然注解可以减少很多xml配置，但还是要在xml配置文件里面配置好标签之后才能生效，里面涉及到很多对xml命名空间的解析，对后面模块的分析也有帮助，所以先从xml解析初始化分析走，注解方式的注入就分析个大概了。随便吐槽下，分析开源框架最忌讳的就是陷入到分析解析xml去了，现在流行的框架差不多都会涉及到解析xml，每研究一个开源框架，分析xml都会花很多时间，其实不想写出来，因为没有技术含量，但是有时候跟同事交流又会问道怎么解析xml的，真的好蛋疼。由于spring有很多自定义标签而初始化了很多内嵌对象，所以还是写下初始化流程吧。</p>
+<a id="more"></a>
+<!-- --- -->
+
+<p>这里先声明下，下面的分析只针对单个bean的初始化，并没有涉及到其他复杂场景的bean初始化，配置文件如下：</p>
+<pre><code>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;beans xmlns=&quot;http://www.springframework.org/schema/beans&quot;
+    xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+    xmlns:c=&quot;http://www.springframework.org/schema/c&quot;
+    xmlns:p=&quot;http://www.springframework.org/schema/p&quot;
+    xmlns:util=&quot;http://www.springframework.org/schema/util&quot;
+    xsi:schemaLocation=&quot;http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.2.xsd&quot; 
+        default-autowire=&quot;default&quot;&gt;
+
+    &lt;bean id=&quot;simple&quot; class=&quot;mytest.bean.simpleBean.SimpleBean&quot;/&gt;
+
+&lt;/beans&gt;</code></pre><p>就如此简单。</p>
+<h1 id="初始化流程"><a href="#初始化流程" class="headerlink" title="初始化流程"></a>初始化流程</h1><p>从最简单的初始化一个bean进行分析，以ClassPathXmlApplicationContext为例，由于该类继承了AbstractApplicationContext，所以初始化的时候都是从refresh方法开始的。前面分析了，容器里面最核心的一个类是DefaultListableBeanFactory，在初始化解析器之前就要先创建该类。解析xml为BeanDefinition在obtainFreshBeanFactory完成，下面就详细分析改方法。</p>
+<h2 id="初始化xml解析器"><a href="#初始化xml解析器" class="headerlink" title="初始化xml解析器"></a>初始化xml解析器</h2><p>参考前面章节的加载bean的入口在AbstractRefreshableApplicationContext的loadBeanDefinitions方法，由于XmlWebApplicationContext与一般的应用加载bean的配置文件有些不一样，所以loadBeanDefinitions是单独由实现的，其实内部还是由XmlBeanDefinitionReader完成bean的解析。ClassPathXmlApplicationContext、FileSystemXmlApplicationContext都由AbstractXmlApplicationContext的loadBeanDefinitions实现了初始化xml解析器操作。参考代码：</p>
+<pre><code>@Override
+protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) throws BeansException, IOException {
+    // Create a new XmlBeanDefinitionReader for the given BeanFactory.
+    XmlBeanDefinitionReader beanDefinitionReader = new XmlBeanDefinitionReader(beanFactory);
+
+    // Configure the bean definition reader with this context&apos;s
+    // resource loading environment.
+    beanDefinitionReader.setEnvironment(this.getEnvironment());
+    beanDefinitionReader.setResourceLoader(this);
+    beanDefinitionReader.setEntityResolver(new ResourceEntityResolver(this));
+
+    // Allow a subclass to provide custom initialization of the reader,
+    // then proceed with actually loading the bean definitions.
+    initBeanDefinitionReader(beanDefinitionReader);
+    loadBeanDefinitions(beanDefinitionReader);
+}</code></pre><p>在实例化ResourceEntityResolver解析器时，在父类DelegatingEntityResolver初始化了BeansDtdResolver、PluggableSchemaResolver，这两种解析器分别解析dtd与schema两种方式的xml。</p>
+<h2 id="解析配置文件为Document对象"><a href="#解析配置文件为Document对象" class="headerlink" title="解析配置文件为Document对象"></a>解析配置文件为Document对象</h2><p>实例化XmlBeanDefinitionReader的时候，内部的DefaultDocumentLoader就创建好了，此类完成创建Document对象。参考loadDocument方法：</p>
+<pre><code>@Override
+public Document loadDocument(InputSource inputSource, EntityResolver entityResolver,
+        ErrorHandler errorHandler, int validationMode, boolean namespaceAware) throws Exception {
+
+    DocumentBuilderFactory factory = createDocumentBuilderFactory(validationMode, namespaceAware);
+    if (logger.isDebugEnabled()) {
+        logger.debug(&quot;Using JAXP provider [&quot; + factory.getClass().getName() + &quot;]&quot;);
+    }
+    DocumentBuilder builder = createDocumentBuilder(factory, entityResolver, errorHandler);
+    return builder.parse(inputSource);
+}</code></pre><p>由于实例化的时候已经设置了解析器为ResourceEntityResolver，所以直接看resolveEntity方法，有父类DelegatingEntityResolver去执行解析：</p>
+<pre><code>@Override
+public InputSource resolveEntity(String publicId, String systemId) throws SAXException, IOException {
+    if (systemId != null) {
+        if (systemId.endsWith(DTD_SUFFIX)) {
+            return this.dtdResolver.resolveEntity(publicId, systemId);
+        }
+        else if (systemId.endsWith(XSD_SUFFIX)) {
+            return this.schemaResolver.resolveEntity(publicId, systemId);
+        }
+    }
+    return null;
+}</code></pre><p>由于spring都是使用的schema方式的定义的xml，所有使用PluggableSchemaResolver去解析xml，从这个类中就可以看到spring定义的xml标签约束了，在没个模块下面有个spring.schema文件，也就是以后的标签必须按照定义的schema规范来写标签。</p>
+<h2 id="解析DOM节点"><a href="#解析DOM节点" class="headerlink" title="解析DOM节点"></a>解析DOM节点</h2><p>上面分析了已经创建好Docment对象了，接下来就解析DOM节点了。spring有一般的标签（如<bean>），还有种命名空间类型的标签（如：<a href="context:component-scan">context:component-scan</a>），第一种按照正常的流程解析就完了，而第二种就是需要初始化一些内部对象会用到了。参考把初始化后的Document对象传到XmlBeanDefinitionReader的registerBeanDefinitions方法：</bean></p>
+<pre><code>public int registerBeanDefinitions(Document doc, Resource resource) throws BeanDefinitionStoreException {
+    BeanDefinitionDocumentReader documentReader = createBeanDefinitionDocumentReader();
+    int countBefore = getRegistry().getBeanDefinitionCount();
+    documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
+    return getRegistry().getBeanDefinitionCount() - countBefore;
+}</code></pre><p>需要注解的就是createReaderContext创建XmlReaderContext的时候，就有getNamespaceHandlerResolver方法把spring.handlers文件里面的内置对象加载进来了，用于解析命名空间类型的标签。DefaultBeanDefinitionDocumentReader将xml解析最后生成BeanDefinitionHolder，参考方法processBeanDefinition:</p>
+<pre><code>protected void processBeanDefinition(Element ele, BeanDefinitionParserDelegate delegate) {
+    BeanDefinitionHolder bdHolder = delegate.parseBeanDefinitionElement(ele);
+    if (bdHolder != null) {
+        bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
+        try {
+            // Register the final decorated instance.
+            //注册bean到容器（DefaultListableBeanFactory）
+            BeanDefinitionReaderUtils.registerBeanDefinition(bdHolder, getReaderContext().getRegistry());
+        }
+        catch (BeanDefinitionStoreException ex) {
+            getReaderContext().error(&quot;Failed to register bean definition with name &apos;&quot; +
+                    bdHolder.getBeanName() + &quot;&apos;&quot;, ele, ex);
+        }
+        //触发注册监听器
+        // Send registration event.
+        getReaderContext().fireComponentRegistered(new BeanComponentDefinition(bdHolder));
+    }
+}</code></pre><p>这里比较重要的一个对象就是BeanDefinitionHolder的内部对象BeanDefinition，它保存了bean的所有信息，包括各种依赖关系，随便画了一个简单的类图：</p>
+<p><img src="/images/spring/2-1.png" alt></p>
+<p>至此解析XML就完成了。这里虽然没有介绍解析命名空间，但是后面分析注解的时候会顺带分析了，分析完自己也画了个时序图，包含了对命名空间类型节点的解析流程：</p>
+<p><img src="/images/spring/2-2.png" alt></p>
+<h2 id="实例化bean"><a href="#实例化bean" class="headerlink" title="实例化bean"></a>实例化bean</h2><p>由上面的分析就只之，解析xml保存到DefaultListableBeanFactory中的只是BeanDefinition，并没有实例化。上面都初始化都发生在AbstractApplicationContext的obtainFreshBeanFactory方法，在refresh方法中可以看到，有个finishBeanFactoryInitialization，只要是singleton的bean，这里就是实例化的入口了，最终会走到DefaultListableBeanFactory.preInstantiateSingletons()，遍历解析xml时保存的beanDefinitionNames，并调用getBean方法，参考AbstractBeanFactory的方法：</p>
+<pre><code>protected &lt;T&gt; T doGetBean(
+        final String name, final Class&lt;T&gt; requiredType, final Object[] args, boolean typeCheckOnly)
+        throws BeansException {
+    ......
+
+            if (mbd.isSingleton()) {
+                sharedInstance = getSingleton(beanName, new ObjectFactory&lt;Object&gt;() {
+                    @Override
+                    public Object getObject() throws BeansException {
+                        try {
+                            //开始创建bean，由AbstractAutowireCapableBeanFactory实现
+                            return createBean(beanName, mbd, args);
+                        }
+                        catch (BeansException ex) {
+                            // Explicitly remove instance from singleton cache: It might have been put there
+                            // eagerly by the creation process, to allow for circular reference resolution.
+                            // Also remove any beans that received a temporary reference to the bean.
+                            destroySingleton(beanName);
+                            throw ex;
+                        }
+                    }
+                });
+                bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+            }
+    ......
+    return (T) bean;
+}</code></pre><p>注意获取bean的时候有个createBean方法，参考《spring源码分析之Ioc容器分析》，AbstractBeanFactory的子类就是AbstractAutowireCapableBeanFactory，所以这个类就是创建bean入口。由于不涉及到代理bean的创建，所以直接参考doCreateBean方法：</p>
+<pre><code>protected Object doCreateBean(final String beanName, final RootBeanDefinition mbd, final Object[] args) {
+    // Instantiate the bean.
+    BeanWrapper instanceWrapper = null;
+    if (mbd.isSingleton()) {
+        instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
+    }
+    if (instanceWrapper == null) {
+//实例化bean
+        instanceWrapper = createBeanInstance(beanName, mbd, args);
+    }
+    final Object bean = (instanceWrapper != null ? instanceWrapper.getWrappedInstance() : null);
+    Class&lt;?&gt; beanType = (instanceWrapper != null ? instanceWrapper.getWrappedClass() : null);
+}</code></pre><p>将实例化后的bean设置到BeanWrapper （转换属性类型）</p>
+<pre><code>protected BeanWrapper instantiateBean(final String beanName, final RootBeanDefinition mbd) {
+    try {
+        Object beanInstance;
+        final BeanFactory parent = this;
+        if (System.getSecurityManager() != null) {
+            beanInstance = AccessController.doPrivileged(new PrivilegedAction&lt;Object&gt;() {
+                @Override
+                public Object run() {
+                    return getInstantiationStrategy().instantiate(mbd, beanName, parent);
+                }
+            }, getAccessControlContext());
+        }
+        else {
+            //bean必须有空构造函数
+            beanInstance = getInstantiationStrategy().instantiate(mbd, beanName, parent);
+        }
+        BeanWrapper bw = new BeanWrapperImpl(beanInstance);
+        initBeanWrapper(bw);
+        return bw;
+    }
+    catch (Throwable ex) {
+        throw new BeanCreationException(mbd.getResourceDescription(), beanName, &quot;Instantiation of bean failed&quot;, ex);
+    }
+}</code></pre><p>需要注意的是实例化的bean必须有空的构造函数，参考SimpleInstantiationStrategy类：</p>
+<pre><code>@Override
+public Object instantiate(RootBeanDefinition bd, String beanName, BeanFactory owner) {
+    // Don&apos;t override the class with CGLIB if no overrides.
+    if (bd.getMethodOverrides().isEmpty()) {
+        Constructor&lt;?&gt; constructorToUse;
+        synchronized (bd.constructorArgumentLock) {
+            constructorToUse = (Constructor&lt;?&gt;) bd.resolvedConstructorOrFactoryMethod;
+            if (constructorToUse == null) {
+                final Class&lt;?&gt; clazz = bd.getBeanClass();
+                if (clazz.isInterface()) {
+                    throw new BeanInstantiationException(clazz, &quot;Specified class is an interface&quot;);
+                }
+                try {
+                    if (System.getSecurityManager() != null) {
+                        constructorToUse = AccessController.doPrivileged(new PrivilegedExceptionAction&lt;Constructor&lt;?&gt;&gt;() {
+                            @Override
+                            public Constructor&lt;?&gt; run() throws Exception {
+                                return clazz.getDeclaredConstructor((Class[]) null);
+                            }
+                        });
+                    }
+                    else {
+                        //必须有空构造函数，不然反射就抛异常
+                        constructorToUse =    clazz.getDeclaredConstructor((Class[]) null);
+                    }
+                    bd.resolvedConstructorOrFactoryMethod = constructorToUse;
+                }
+                catch (Exception ex) {
+                    throw new BeanInstantiationException(clazz, &quot;No default constructor found&quot;, ex);
+                }
+            }
+        }
+        return BeanUtils.instantiateClass(constructorToUse);
+    }
+    else {
+        // Must generate CGLIB subclass.
+        return instantiateWithMethodInjection(bd, beanName, owner);
+    }
+}</code></pre><p>然后通过反射实例化的bean添加到BeanWrapperImpl，看配置文件是否注册了转换器，最终BeanWrapperImpl通过getWrappedInstance就获取到实例化后的bean了。实例化bean也画了一个时序图，便于以后复习：</p>
+<p><img src="/images/spring/2-3.png" alt></p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/spring/">spring</a>
+</div>
+
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/spring/">spring</a>
+  </div>
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://zeng233.github.io/2016/09/05/6.2spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8B%E5%9F%BA%E4%BA%8Exml%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%9A%84bean%E5%88%9D%E5%A7%8B%E5%8C%96%E5%88%86%E6%9E%90/" data-title="spring源码分析之基于xml配置文件的bean初始化分析 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/09/06/6.3spring源码分析之基于注解配置的bean初始化分析/" title="spring源码分析之基于注解配置的bean初始化分析">
+  <strong>上一篇：</strong><br/>
+  <span>
+  spring源码分析之基于注解配置的bean初始化分析</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/09/04/6.1spring源码分析之Ioc容器分析/"  title="spring源码分析之IoC容器分析">
+ <strong>下一篇：</strong><br/> 
+ <span>spring源码分析之IoC容器分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2016/09/05/6.2spring源码分析之基于xml配置文件的bean初始化分析/" data-title="spring源码分析之基于xml配置文件的bean初始化分析" data-url="http://zeng233.github.io/2016/09/05/6.2spring%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90%E4%B9%8B%E5%9F%BA%E4%BA%8Exml%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%9A%84bean%E5%88%9D%E5%A7%8B%E5%8C%96%E5%88%86%E6%9E%90/"></div>
+</section>
+
+
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#初始化流程"><span class="toc-number">1.</span> <span class="toc-text">初始化流程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#初始化xml解析器"><span class="toc-number">1.1.</span> <span class="toc-text">初始化xml解析器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解析配置文件为Document对象"><span class="toc-number">1.2.</span> <span class="toc-text">解析配置文件为Document对象</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解析DOM节点"><span class="toc-number">1.3.</span> <span class="toc-text">解析DOM节点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实例化bean"><span class="toc-number">1.4.</span> <span class="toc-text">实例化bean</span></a></li></ol></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+<div class="github-card">
+<p class="asidetitle">Github 名片</p>
+<div class="github-card" data-github="zeng233" data-theme="medium"></div>
+<script type="text/javascript" src="//cdn.jsdelivr.net/github-cards/latest/widget.js" ></script>
+</div>
+
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java-SE/" title="Java SE">Java SE<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/programming-road/" title="programming road">programming road<sup>2</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/spring/" title="spring">spring<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+		
+			
+				<li><a href="/tags/mybatis/" title="mybatis">mybatis<sup>9</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/spring/" title="spring">spring<sup>6</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/concurrent/" title="concurrent">concurrent<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/JavaScript/" title="JavaScript">JavaScript<sup>2</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/hexo/" title="hexo">hexo<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/coding/" title="coding">coding<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/jQuery/" title="jQuery">jQuery<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/IoC/" title="IoC">IoC<sup>1</sup></a></li>
+			
+		
+			
+				<li><a href="/tags/zookeeper/" title="zookeeper">zookeeper<sup>1</sup></a></li>
+			
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="http://coolshell.cn/" target="_blank" title="酷壳">酷壳</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://jm.taobao.org/" target="_blank" title="阿里中间件团队博客">阿里中间件团队博客</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://martinfowler.com/" target="_blank" title="Martin Fowler&#39;s Blog">Martin Fowler&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://gee.cs.oswego.edu/" target="_blank" title="Doug Lea&#39;s Blog">Doug Lea&#39;s Blog</a>
+            
+          </li>
+        
+          <li>
+            
+            	<a href="http://stackoverflow.com/" target="_blank" title="StackOverflow">StackOverflow</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  
+
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=2043260800&verifier=b3593ceb&dpc=1"></iframe>
+</div>
+
+
+  <div class="rsspart">
+	<a href="/atom.xml" target="_blank" title="rss">RSS 订阅</a>
+</div>
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> If you work hard, you will be successful! <br/>
+			This is my blog,believe it or not.</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2043260800" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		<a href="https://github.com/zeng233" target="_blank" class="icon-github" title="github"></a>
+		
+		
+		<a href="http://stackoverflow.com/users/4250881" target="_blank" class="icon-stack-overflow" title="stackoverflow"></a>
+		
+		
+		<a href="https://twitter.com/zeng233" target="_blank" class="icon-twitter" title="twitter"></a>
+		
+		
+		<a href="https://www.facebook.com/hua.zeng.545" target="_blank" class="icon-facebook" title="facebook"></a>
+		
+		
+		<a href="https://www.linkedin.com/in/zeng-hua-b3314978" target="_blank" class="icon-linkedin" title="linkedin"></a>
+		
+		
+		
+		<a href="http://www.zhihu.com/people/zhu-lin-xian-ren" target="_blank" class="icon-zhihu" title="知乎"></a>
+		
+		
+		<a href="https://plus.google.com/106512881304692844041?rel=author" target="_blank" class="icon-google_plus" title="Google+"></a>
+		
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2023 
+		
+		<a href="/about" target="_blank" title="竹林闲人">竹林闲人</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/jquery.qrcode-0.12.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<div class="hoverqrcode clearfix"></div>',
+  '<a class="overlay" id="qrcode"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+
+  $('.hoverqrcode').hide();
+
+  var myWidth = 0;
+  function updatehoverqrcode(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+    var qrsize = myWidth > 1024 ? 200:100;
+    var options = {render: 'image', size: qrsize, fill: '#2ca6cb', text: url, radius: 0.5, quiet: 1};
+    var p = $('.article-share-qrcode').position();
+    $('.hoverqrcode').empty().css('width', qrsize).css('height', qrsize)
+                          .css('left', p.left-qrsize/2+20).css('top', p.top-qrsize-10)
+                          .qrcode(options);
+  };
+  $(window).resize(function(){
+    $('.hoverqrcode').hide();
+  });
+  $('.article-share-qrcode').click(function(){
+    updatehoverqrcode();
+    $('.hoverqrcode').toggle();
+  });
+  $('.article-share-qrcode').hover(function(){}, function(){
+      $('.hoverqrcode').hide();
+  });
+});   
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"zeng233"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?e6d1f421bbc9962127a50488f9ed37d1";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
