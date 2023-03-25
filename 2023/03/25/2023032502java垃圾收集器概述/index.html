@@ -4,29 +4,31 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>JVM概述 | DukeZeng</title>
+    <title>2023032502java垃圾收集器概述 | DukeZeng</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="竹林闲人">
     
 
     
-    <meta name="description" content="背景为什么要使用虚拟机？从编程语言的演变发展来看，开关-》二进制-》汇编-》C语言-》C++-》java，经过一层层抽象，为了跨平台，最终形成了虚拟机，其中的发展细节可以参考《编码：隐匿在计算机软硬件背后的语言》。java程序经过编译器编译，生成java字节码，再由java虚拟机加载字节码，最终生成目标代码，用户端源码不用修改就可以跨平台运行。 JVM结构jvm内部结构图：  红色框部分表示线程私">
+    <meta name="description" content="title: java垃圾收集器概述date: 2022&#x2F;12&#x2F;11 22:05:06updated: 2022&#x2F;12&#x2F;11 22:05:06comments: truecategories:  jvmtags: jvm  背景java语言作为后起之秀，解决了以前手动管理内存的问题，这里面一个重要的东西就垃圾回收器，虽然开发人员不用关心内存分配问题了，但是线上运行的系统可能会有各种未知的问题，如有">
 <meta property="og:type" content="article">
-<meta property="og:title" content="JVM概述">
-<meta property="og:url" content="http://zeng233.github.io/2022/12/10/2023032501JVM%E6%A6%82%E8%BF%B0/index.html">
+<meta property="og:title" content="2023032502java垃圾收集器概述">
+<meta property="og:url" content="http://zeng233.github.io/2023/03/25/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/index.html">
 <meta property="og:site_name" content="DukeZeng">
-<meta property="og:description" content="背景为什么要使用虚拟机？从编程语言的演变发展来看，开关-》二进制-》汇编-》C语言-》C++-》java，经过一层层抽象，为了跨平台，最终形成了虚拟机，其中的发展细节可以参考《编码：隐匿在计算机软硬件背后的语言》。java程序经过编译器编译，生成java字节码，再由java虚拟机加载字节码，最终生成目标代码，用户端源码不用修改就可以跨平台运行。 JVM结构jvm内部结构图：  红色框部分表示线程私">
+<meta property="og:description" content="title: java垃圾收集器概述date: 2022&#x2F;12&#x2F;11 22:05:06updated: 2022&#x2F;12&#x2F;11 22:05:06comments: truecategories:  jvmtags: jvm  背景java语言作为后起之秀，解决了以前手动管理内存的问题，这里面一个重要的东西就垃圾回收器，虽然开发人员不用关心内存分配问题了，但是线上运行的系统可能会有各种未知的问题，如有">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png">
-<meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM2.jpeg">
-<meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM3.png">
-<meta property="article:published_time" content="2022-12-10T13:05:06.000Z">
-<meta property="article:modified_time" content="2022-12-10T13:05:06.000Z">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/1.%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E5%8F%AF%E5%9B%9E%E6%94%B6.jpg">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/2.%E5%88%86%E4%BB%A3%E6%94%B6%E9%9B%86.png">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/3.%E6%A0%87%E8%AE%B0-%E6%B8%85%E9%99%A4%E7%AE%97%E6%B3%95.jpg">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/4.%E6%A0%87%E8%AE%B0%E5%A4%8D%E5%88%B6%E7%AE%97%E6%B3%95.jpg">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/5.%E6%A0%87%E8%AE%B0-%E6%95%B4%E7%90%86%E7%AE%97%E6%B3%95.jpg">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/6.%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8.png">
+<meta property="article:published_time" content="2023-03-25T09:31:55.925Z">
+<meta property="article:modified_time" content="2023-03-25T09:32:19.823Z">
 <meta property="article:author" content="竹林闲人">
-<meta property="article:tag" content="jvm">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png">
+<meta name="twitter:image" content="http://zeng233.github.io/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/1.%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E5%8F%AF%E5%9B%9E%E6%94%B6.jpg">
 <meta name="twitter:creator" content="@zeng233">
 <link rel="publisher" href="106512881304692844041">
 
@@ -42,8 +44,6 @@
     
     
 <link rel="stylesheet" href="/css/style.css">
-<link rel="stylesheet" href="/%02.css">
-<link rel="stylesheet" href="/.css">
 
 <meta name="generator" content="Hexo 4.2.1"></head>
 
@@ -88,14 +88,14 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2022/12/10/2023032501JVM概述/" title="JVM概述" itemprop="url">JVM概述</a>
+      <a href="/2023/03/25/2023032502java垃圾收集器概述/" title="2023032502java垃圾收集器概述" itemprop="url">2023032502java垃圾收集器概述</a>
   </h1>
   <p class="article-author">By
        
 		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
 		
   <p class="article-time">
-    <time datetime="2022-12-10T13:05:06.000Z" itemprop="datePublished"> 发表于 2022-12-10</time>
+    <time datetime="2023-03-25T09:31:55.925Z" itemprop="datePublished"> 发表于 2023-03-25</time>
     
   </p>
 </header>
@@ -104,46 +104,75 @@
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#JVM结构"><span class="toc-number">2.</span> <span class="toc-text">JVM结构</span></a></li></ol>
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#回收前置条件"><span class="toc-number">2.</span> <span class="toc-text">回收前置条件</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#引用类型"><span class="toc-number">3.</span> <span class="toc-text">引用类型</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#垃圾收集器"><span class="toc-number">4.</span> <span class="toc-text">垃圾收集器</span></a></li></ol>
 		
 		</div>
 		
-		<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>为什么要使用虚拟机？从编程语言的演变发展来看，开关-》二进制-》汇编-》C语言-》C++-》java，经过一层层抽象，为了跨平台，最终形成了虚拟机，其中的发展细节可以参考《编码：隐匿在计算机软硬件背后的语言》。java程序经过编译器编译，生成java字节码，再由java虚拟机加载字节码，最终生成目标代码，用户端源码不用修改就可以跨平台运行。</p>
-<h1 id="JVM结构"><a href="#JVM结构" class="headerlink" title="JVM结构"></a>JVM结构</h1><p>jvm内部结构图：</p>
-<p><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png" alt="jvm内部结构"></p>
-<p>红色框部分表示线程私有变量，method area、heap为线程共享部分。runtime data areas 5块内容介绍：</p>
+		<p>title: java垃圾收集器概述<br>date: 2022/12/11 22:05:06<br>updated: 2022/12/11 22:05:06<br>comments: true<br>categories:</p>
 <ul>
-<li><p><strong>程序计数器（program counter register）</strong>：JVM每个线程都有自己的PC，通过PC去找到自己的执行方法，线程执行如下图所示：<br><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM2.jpeg" alt="线程执行图"></p>
-</li>
-<li><p><strong>JVM栈（stack）</strong>：如上图所示，在JVM线程执行方法时，在内部都有一个栈空间，栈的作用就是存储Frame结构，里面包含了各种参数（方法参数，成员变量参数，返回值参数等等）引用：<br><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM3.png" alt="JVM栈"><br>栈空间经常有两个异常是和它先关的：</p>
-</li>
+<li>jvm<br>tags:</li>
+<li>jvm</li>
 </ul>
-<p>1.<strong>StackOverflowError</strong>，当执行线程的方法栈的容量大于JVM可允许的容量时，就抛出StackOverflowError（纵向比较）<br>2.<strong>OutOfMemoryError</strong>，栈内存可以动态扩展，虽然内存不足，但是允许为每个线程初始化栈空间，这时就会抛出OutOfMemoryError（横向比较）</p>
+<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>java语言作为后起之秀，解决了以前手动管理内存的问题，这里面一个重要的东西就垃圾回收器，虽然开发人员不用关心内存分配问题了，但是线上运行的系统可能会有各种未知的问题，如有内存溢出、频繁的full gc等等，这里面就涉及到一些参数调整，如果不对垃圾回收器有个大概的了解，处理起来也很棘手。</p>
+<h1 id="回收前置条件"><a href="#回收前置条件" class="headerlink" title="回收前置条件"></a>回收前置条件</h1><p>判断对象是否可回收？</p>
+<p>1.引用计数算法</p>
+<p>当某个对象的引用数量大于0时才是存活的，一旦引用数量为0就可以回收，java虚拟机没使用这种算法，不做解释，想研究算法的可参考《垃圾回收算法手册  自动内存管理的艺术》第五章节。</p>
+<p>2.可达性分析算法</p>
+<p>Hotspot虚拟机就采用此算法，如下图：</p>
+<p><img src="/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/1.%E5%88%A4%E6%96%AD%E5%AF%B9%E8%B1%A1%E6%98%AF%E5%90%A6%E5%8F%AF%E5%9B%9E%E6%94%B6.jpg" alt></p>
+<p>在 Java 中 GC Roots 一般包含以下内容:</p>
 <ul>
-<li><p><strong>本地方法栈（ Native Method Stacks）</strong><br>俗称”C Stack”，如果有本地方法，每个执行线程会单独的创建一个C stack。这里也有可能有两个错误异常，原因和栈空间一样。</p>
-</li>
-<li><p><strong>堆空间（heap）</strong><br>用于存储类实例以及数组分配的空间，JVM线程可以共享该区域。垃圾收集器回收利用对象就是在这个区域实现的。堆空间不需要连续的，内部是有向图数据结构，而栈空间是连续的。堆空间可以通过外部命令设置空间大小，如果程序运行期间堆空间的容量大于JVM设置的堆空间最大容量，就会抛出OutOfMemoryError。</p>
-</li>
-<li><p><strong>方法区域（Method Area）</strong><br>逻辑上是堆空间的一部分，线程也可以共享，它存储了每个类（.class）的常量、属性、方法以及构造方法，它有最大、最小空间阈值，如果方法区域空间不能满足请求分配的容量（超出最大阈值），就会抛出OutOfMemoryError。方法区内部还有一块运行时常量池（Runtime Constant Pool），编译生成的各种常量就会存到该区域，如果存储容量超过方法区的限制，也会抛出OutOfMemoryError。</p>
-</li>
+<li>虚拟机栈中引用的对象</li>
+<li>本地方法栈中引用的对象</li>
+<li>方法区中类静态属性引用的对象</li>
+<li>方法区中的常量引用的对象</li>
 </ul>
-<p>最后说下，虚拟机之外还有一块直接内存，由JDK1.4NIO引入，它通过DirectByteBuffer存储到堆内存，堆里面只是引用，实际它的大小限制是不受JVM控制的，如果这块内容大于实际物理内存也会抛出OutOfMemoryError。了解虚拟机目的是为了排查处理系统可能遇到的问题，而不是研发性质的，如果一天能花20%的时间了解虚拟机的一个大概内容，对后面JVM调优、问题排查还是很有帮助。</p>
-<p>参考资料：<br><a href="https://book.douban.com/subject/1788390/" target="_blank" rel="noopener">《Inside the Java 2 Virtual Machine》</a><br><a href="https://book.douban.com/subject/34907497/" target="_blank" rel="noopener">《深入理解Java虚拟机：JVM高级特性与最佳实践（第3版）》</a></p>
+<p>3.finalize()方法</p>
+<p>如果进行可达性分析回收之后，有执行finalize()方法，相当于对象发出一次自救行为，系统也自会自救一次，如果下次垃圾回收还是会把此对象回收掉。</p>
+<p>4.常量池的回收条件：</p>
+<ul>
+<li>该类所有的实例都已经被回收，也就是Java堆中不存在该类及其任何派生子类的实例。</li>
+<li>加载该类的类加载器已经被回收。</li>
+<li>该类对应的java.lang.Class对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。</li>
+</ul>
+<h1 id="引用类型"><a href="#引用类型" class="headerlink" title="引用类型"></a>引用类型</h1><p>强引用：如Object obj=new Object()，无论任何情况下，只要强引用关系还存在，垃圾收集器就永远不会回收掉被引用的对象。<br>软引用：在系统将要发生内存溢出异常前，会把这些对象列进回收范围之中进行第二次回收，如果这次回收还没有足够的内存，才会抛出内存溢出异常，使用SoftReference实现。<br>弱引用：被弱引用关联的对象只能生存到下一次垃圾收集发生为止。当垃圾收集器开始工作，无论当前内存是否足够，都会回收掉只被弱引用关联的对象，使用WeakReference实现。<br>虚引用：最弱的一种引用关系，为一个对象设置虚引用关联的唯一目的只是为了能在这个对象被收集器回收时收到一个系统通知，使用PhantomReference实现。</p>
+<p>#垃圾回收算法</p>
+<ol>
+<li>分代收集理论</li>
+</ol>
+<p><img src="/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/2.%E5%88%86%E4%BB%A3%E6%94%B6%E9%9B%86.png" alt></p>
+<p>如图所示，堆空间里面，大部分对象的生命周期都很短暂，java虚拟机针对不同的分代，采用了不同的垃圾算法。</p>
+<ol start="2">
+<li>标记-清除算法</li>
+</ol>
+<p><img src="/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/3.%E6%A0%87%E8%AE%B0-%E6%B8%85%E9%99%A4%E7%AE%97%E6%B3%95.jpg" alt></p>
+<p>标记可回收对象，然后统一清除。缺点：1）执行效率不稳定，如果有大量对象需要回收，需要大量的标记清理；2）会产生大量不连续的内存碎片，导致无法给大对象分配内存。</p>
+<ol start="2">
+<li>标记-复制算法</li>
+</ol>
+<p><img src="/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/4.%E6%A0%87%E8%AE%B0%E5%A4%8D%E5%88%B6%E7%AE%97%E6%B3%95.jpg" alt></p>
+<p>将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。当这一块的内存用完了，就将还存活着的对象复制到另外一块上面，然后再把已使用过的内存空间一次清理掉。缺点：只是用了一半的内存。</p>
+<ol start="3">
+<li>标记-整理算法</li>
+</ol>
+<p><img src="/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/5.%E6%A0%87%E8%AE%B0-%E6%95%B4%E7%90%86%E7%AE%97%E6%B3%95.jpg" alt></p>
+<p>让所有存活的对象都向内存空间一端移动，然后直接清理掉边界以外的内存。</p>
+<h1 id="垃圾收集器"><a href="#垃圾收集器" class="headerlink" title="垃圾收集器"></a>垃圾收集器</h1><p><img src="/images/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/6.%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8.png" alt></p>
+<p>使用-XX JVM参数对应的垃圾收集器：</p>
+<p>UseSerialGC：Serial + Serial Old；</p>
+<p>UseParNewGC：ParNew + Serial Old；</p>
+<p>UseConcMarkSweepGC：ParNew + CMS + Serial Old，Serial Old只是当CMS收集失败了备用的一个选择；</p>
+<p>UseParallelGC：Parallel Scanvenge + Serial Old；</p>
+<p>UseParallelOldGC：Parallel Scanvenge + Parallel Old；</p>
+<p>UseG1GC:G1。</p>
+<p>参考资料：</p>
+<p><a href="https://docs.oracle.com/javase/10/gctuning/introduction-garbage-collection-tuning.htm" target="_blank" rel="noopener">Java Platform, Standard Edition HotSpot Virtual Machine Garbage Collection Tuning Guide</a></p>
+<p><a href="https://book.douban.com/subject/34907497/" target="_blank" rel="noopener">《深入理解Java虚拟机：JVM高级特性与最佳实践（第3版》</a></p>
   
 	</div>
 		<footer class="article-footer clearfix">
 <div class="article-catetags">
 
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/jvm/">jvm</a>
-</div>
-
-
-  <div class="article-tags">
-  
-  <span></span> <a href="/tags/jvm/">jvm</a>
-  </div>
 
 </div>
 
@@ -151,7 +180,7 @@
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://zeng233.github.io/2022/12/10/2023032501JVM%E6%A6%82%E8%BF%B0/" data-title="JVM概述 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  <div data-url="http://zeng233.github.io/2023/03/25/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/" data-title="2023032502java垃圾收集器概述 | DukeZeng" data-tsina="2043260800" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -164,19 +193,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2023/03/25/2023032502java垃圾收集器概述/" title="2023032502java垃圾收集器概述">
-  <strong>上一篇：</strong><br/>
-  <span>
-  2023032502java垃圾收集器概述</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/12/10/7.1zookeeper集群启动分析/"  title="zookeeper集群启动分析">
+<a href="/2022/12/10/2023032501JVM概述/"  title="JVM概述">
  <strong>下一篇：</strong><br/> 
- <span>zookeeper集群启动分析
+ <span>JVM概述
 </span>
 </a>
 </div>
@@ -185,7 +206,7 @@
 
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2022/12/10/2023032501JVM概述/" data-title="JVM概述" data-url="http://zeng233.github.io/2022/12/10/2023032501JVM%E6%A6%82%E8%BF%B0/"></div>
+	<div class="ds-thread" data-thread-key="2023/03/25/2023032502java垃圾收集器概述/" data-title="2023032502java垃圾收集器概述" data-url="http://zeng233.github.io/2023/03/25/2023032502java%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8%E6%A6%82%E8%BF%B0/"></div>
 </section>
 
 
@@ -197,7 +218,7 @@
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#JVM结构"><span class="toc-number">2.</span> <span class="toc-text">JVM结构</span></a></li></ol>
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#回收前置条件"><span class="toc-number">2.</span> <span class="toc-text">回收前置条件</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#引用类型"><span class="toc-number">3.</span> <span class="toc-text">引用类型</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#垃圾收集器"><span class="toc-number">4.</span> <span class="toc-text">垃圾收集器</span></a></li></ol>
  
   </div>
 
