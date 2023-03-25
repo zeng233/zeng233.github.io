@@ -4,27 +4,29 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>mybatis自定义插件实现读写分离 | DukeZeng</title>
+    <title>JVM概述 | DukeZeng</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="竹林闲人">
     
 
     
-    <meta name="description" content="mybatis提供了Interceptor接口，这个接口在Executor、ParameterHandler、ResultSetHandler、StatementHandler四个类方法执行的时候进行拦截处理，通过自定义拦截器就可以改变原方法的一些行为，如读写分离、分页查询等，整个过程的执行流程如下图所示：">
+    <meta name="description" content="背景为什么要使用虚拟机？从编程语言的演变发展来看，开关-》二进制-》汇编-》C语言-》C++-》java，经过一层层抽象，为了跨平台，最终形成了虚拟机，其中的发展细节可以参考《编码：隐匿在计算机软硬件背后的语言》。java程序经过编译器编译，生成java字节码，再由java虚拟机加载字节码，最终生成目标代码，用户端源码不用修改就可以跨平台运行。 JVM结构jvm内部结构图：  红色框部分表示线程私">
 <meta property="og:type" content="article">
-<meta property="og:title" content="mybatis自定义插件实现读写分离">
-<meta property="og:url" content="http://zeng233.github.io/2016/07/20/2.9mybatis%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8F%92%E4%BB%B6%E5%AE%9E%E7%8E%B0%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/index.html">
+<meta property="og:title" content="JVM概述">
+<meta property="og:url" content="http://zeng233.github.io/2022/12/10/2023032501JVM%E6%A6%82%E8%BF%B0/index.html">
 <meta property="og:site_name" content="DukeZeng">
-<meta property="og:description" content="mybatis提供了Interceptor接口，这个接口在Executor、ParameterHandler、ResultSetHandler、StatementHandler四个类方法执行的时候进行拦截处理，通过自定义拦截器就可以改变原方法的一些行为，如读写分离、分页查询等，整个过程的执行流程如下图所示：">
+<meta property="og:description" content="背景为什么要使用虚拟机？从编程语言的演变发展来看，开关-》二进制-》汇编-》C语言-》C++-》java，经过一层层抽象，为了跨平台，最终形成了虚拟机，其中的发展细节可以参考《编码：隐匿在计算机软硬件背后的语言》。java程序经过编译器编译，生成java字节码，再由java虚拟机加载字节码，最终生成目标代码，用户端源码不用修改就可以跨平台运行。 JVM结构jvm内部结构图：  红色框部分表示线程私">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://zeng233.github.io/images/mybatis/2.9-1.png">
-<meta property="article:published_time" content="2016-07-20T01:12:22.000Z">
-<meta property="article:modified_time" content="2016-07-20T04:12:22.000Z">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM2.jpeg">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM3.png">
+<meta property="article:published_time" content="2022-12-10T13:05:06.000Z">
+<meta property="article:modified_time" content="2022-12-10T13:05:06.000Z">
 <meta property="article:author" content="竹林闲人">
-<meta property="article:tag" content="mybatis">
+<meta property="article:tag" content="jvm">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://zeng233.github.io/images/mybatis/2.9-1.png">
+<meta name="twitter:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png">
 <meta name="twitter:creator" content="@zeng233">
 <link rel="publisher" href="106512881304692844041">
 
@@ -40,8 +42,6 @@
     
     
 <link rel="stylesheet" href="/css/style.css">
-<link rel="stylesheet" href="/%02.css">
-<link rel="stylesheet" href="/.css">
 
 <meta name="generator" content="Hexo 4.2.1"></head>
 
@@ -86,14 +86,14 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/07/20/2.9mybatis自定义插件实现读写分离/" title="mybatis自定义插件实现读写分离" itemprop="url">mybatis自定义插件实现读写分离</a>
+      <a href="/2022/12/10/2023032501JVM概述/" title="JVM概述" itemprop="url">JVM概述</a>
   </h1>
   <p class="article-author">By
        
 		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
 		
   <p class="article-time">
-    <time datetime="2016-07-20T01:12:22.000Z" itemprop="datePublished"> 发表于 2016-07-20</time>
+    <time datetime="2022-12-10T13:05:06.000Z" itemprop="datePublished"> 发表于 2022-12-10</time>
     
   </p>
 </header>
@@ -102,65 +102,31 @@
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			
+			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#JVM结构"><span class="toc-number">2.</span> <span class="toc-text">JVM结构</span></a></li></ol>
 		
 		</div>
 		
-		<p>mybatis提供了Interceptor接口，这个接口在Executor、ParameterHandler、ResultSetHandler、StatementHandler四个类方法执行的时候进行拦截处理，通过自定义拦截器就可以改变原方法的一些行为，如读写分离、分页查询等，整个过程的执行流程如下图所示：</p>
-<a id="more"></a>
-<!-- --- -->
-
-<p><img src="/images/mybatis/2.9-1.png" alt></p>
-<p>为了设置数据源简单点，自定义的拦截器可以和spring配合使用，实现spring的ApplicationContextAware接口（直接从容器中拿到数据源）就可以了，这里以拦截Executor为例，代码实现如下：</p>
-<pre><code>@Intercepts({@Signature(
-      type= Executor.class,
-      method = &quot;query&quot;,
-      args = {MappedStatement.class,Object.class, RowBounds.class,ResultHandler.class})})
-public class MyInterceptor implements Interceptor, ApplicationContextAware {
-    public final Logger mylog = Logger.getLogger(MyInterceptor.class);
-
-    public ConcurrentHashMap&lt;String, Environment&gt; map = new ConcurrentHashMap&lt;&gt;();
-
-    @Override
-    public Object intercept(Invocation invocation) throws Throwable {
-        MappedStatement mappedStatement = (MappedStatement) invocation.getArgs()[0];
-        Configuration configuration = mappedStatement.getConfiguration();
-
-        if (map.get(&quot;slave&quot;) == null) {
-            Environment defaultEnvironment = configuration.getEnvironment();
-            //获取从库的数据源
-            DataSource slaveDatasource = applicationContext.getBean(&quot;slaveDatasource&quot;,  DataSource.class);            
-
-            //设置从库的环境
-            Environment.Builder environmentBuilder = new Environment.Builder(defaultEnvironment.getId())
-                      .transactionFactory(defaultEnvironment.getTransactionFactory())
-                      .dataSource(slaveDatasource );
-
-            Environment slave = environmentBuilder.build();
-            map.put(&quot;slave&quot;, slave);
-        }
-
-        configuration.setEnvironment(map.get(&quot;slave&quot;));
-        return invocation.proceed();
-    }
-
-    @Override
-    public Object plugin(Object target) {
-        //将目标对象封装成代理对象
-        return Plugin.wrap(target, this);
-    }
-
-    @Override
-    public void setProperties(Properties properties) {
-    }
-
-    public void setApplicationContext(ApplicationContext applicationContext) {
-            this.applicationContext = applicationContext;
-    }
-}</code></pre><p>在配置文件中再配置下这个拦截器：</p>
-<pre><code>&lt;plugins&gt;
-    &lt;plugin interceptor=&quot;atest.reopen.session.interceptor.MyInterceptor&quot;&gt;&lt;/plugin&gt;
-&lt;/plugins&gt;</code></pre><p>查询的时候使用从库的数据源，这样就动态的实现了数据库的读写分离，这种实现方式看上去拦截粒度比较粗，如果有特殊查询不用从库的，也可以自定义一套规则，把这些特殊的查询排除掉。如果没有特别需求，我感觉这种方式是最方便的了，网上有些从spring aop级别去控制读写分离的，虽然粒度要精细一些，但是像读写分离这种，个人觉得还是越底层实现越好。</p>
+		<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>为什么要使用虚拟机？从编程语言的演变发展来看，开关-》二进制-》汇编-》C语言-》C++-》java，经过一层层抽象，为了跨平台，最终形成了虚拟机，其中的发展细节可以参考《编码：隐匿在计算机软硬件背后的语言》。java程序经过编译器编译，生成java字节码，再由java虚拟机加载字节码，最终生成目标代码，用户端源码不用修改就可以跨平台运行。</p>
+<h1 id="JVM结构"><a href="#JVM结构" class="headerlink" title="JVM结构"></a>JVM结构</h1><p>jvm内部结构图：</p>
+<p><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png" alt="jvm内部结构"></p>
+<p>红色框部分表示线程私有变量，method area、heap为线程共享部分。runtime data areas 5块内容介绍：</p>
+<ul>
+<li><p><strong>程序计数器（program counter register）</strong>：JVM每个线程都有自己的PC，通过PC去找到自己的执行方法，线程执行如下图所示：<br><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM2.jpeg" alt="线程执行图"></p>
+</li>
+<li><p><strong>JVM栈（stack）</strong>：如上图所示，在JVM线程执行方法时，在内部都有一个栈空间，栈的作用就是存储Frame结构，里面包含了各种参数（方法参数，成员变量参数，返回值参数等等）引用：<br><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM3.png" alt="JVM栈"><br>栈空间经常有两个异常是和它先关的：</p>
+</li>
+</ul>
+<p>1.<strong>StackOverflowError</strong>，当执行线程的方法栈的容量大于JVM可允许的容量时，就抛出StackOverflowError（纵向比较）<br>2.<strong>OutOfMemoryError</strong>，栈内存可以动态扩展，虽然内存不足，但是允许为每个线程初始化栈空间，这时就会抛出OutOfMemoryError（横向比较）</p>
+<ul>
+<li><p><strong>本地方法栈（ Native Method Stacks）</strong><br>俗称”C Stack”，如果有本地方法，每个执行线程会单独的创建一个C stack。这里也有可能有两个错误异常，原因和栈空间一样。</p>
+</li>
+<li><p><strong>堆空间（heap）</strong><br>用于存储类实例以及数组分配的空间，JVM线程可以共享该区域。垃圾收集器回收利用对象就是在这个区域实现的。堆空间不需要连续的，内部是有向图数据结构，而栈空间是连续的。堆空间可以通过外部命令设置空间大小，如果程序运行期间堆空间的容量大于JVM设置的堆空间最大容量，就会抛出OutOfMemoryError。</p>
+</li>
+<li><p><strong>方法区域（Method Area）</strong><br>逻辑上是堆空间的一部分，线程也可以共享，它存储了每个类（.class）的常量、属性、方法以及构造方法，它有最大、最小空间阈值，如果方法区域空间不能满足请求分配的容量（超出最大阈值），就会抛出OutOfMemoryError。方法区内部还有一块运行时常量池（Runtime Constant Pool），编译生成的各种常量就会存到该区域，如果存储容量超过方法区的限制，也会抛出OutOfMemoryError。</p>
+</li>
+</ul>
+<p>最后说下，虚拟机之外还有一块直接内存，由JDK1.4NIO引入，它通过DirectByteBuffer存储到堆内存，堆里面只是引用，实际它的大小限制是不受JVM控制的，如果这块内容大于实际物理内存也会抛出OutOfMemoryError。了解虚拟机目的是为了排查处理系统可能遇到的问题，而不是研发性质的，如果一天能花20%的时间了解虚拟机的一个大概内容，对后面JVM调优、问题排查还是很有帮助。</p>
+<p>参考资料：<br><a href="https://book.douban.com/subject/1788390/" target="_blank" rel="noopener">《Inside the Java 2 Virtual Machine》</a><br><a href="https://book.douban.com/subject/34907497/" target="_blank" rel="noopener">《深入理解Java虚拟机：JVM高级特性与最佳实践（第3版）》</a></p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -168,13 +134,13 @@ public class MyInterceptor implements Interceptor, ApplicationContextAware {
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/mybatis/">mybatis</a>
+  <a class="article-category-link" href="/categories/jvm/">jvm</a>
 </div>
 
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/mybatis/">mybatis</a>
+  <span></span> <a href="/tags/jvm/">jvm</a>
   </div>
 
 </div>
@@ -183,7 +149,7 @@ public class MyInterceptor implements Interceptor, ApplicationContextAware {
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://zeng233.github.io/2016/07/20/2.9mybatis%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8F%92%E4%BB%B6%E5%AE%9E%E7%8E%B0%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/" data-title="mybatis自定义插件实现读写分离 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  <div data-url="http://zeng233.github.io/2022/12/10/2023032501JVM%E6%A6%82%E8%BF%B0/" data-title="JVM概述 | DukeZeng" data-tsina="2043260800" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -196,19 +162,11 @@ public class MyInterceptor implements Interceptor, ApplicationContextAware {
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2016/09/04/6.1spring源码分析之Ioc容器分析/" title="spring源码分析之IoC容器分析">
-  <strong>上一篇：</strong><br/>
-  <span>
-  spring源码分析之IoC容器分析</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/07/07/4.1jQuery插件扩展分析/"  title="jQuery插件扩展分析">
+<a href="/2016/12/10/7.1zookeeper集群启动分析/"  title="zookeeper集群启动分析">
  <strong>下一篇：</strong><br/> 
- <span>jQuery插件扩展分析
+ <span>zookeeper集群启动分析
 </span>
 </a>
 </div>
@@ -217,7 +175,7 @@ public class MyInterceptor implements Interceptor, ApplicationContextAware {
 
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2016/07/20/2.9mybatis自定义插件实现读写分离/" data-title="mybatis自定义插件实现读写分离" data-url="http://zeng233.github.io/2016/07/20/2.9mybatis%E8%87%AA%E5%AE%9A%E4%B9%89%E6%8F%92%E4%BB%B6%E5%AE%9E%E7%8E%B0%E8%AF%BB%E5%86%99%E5%88%86%E7%A6%BB/"></div>
+	<div class="ds-thread" data-thread-key="2022/12/10/2023032501JVM概述/" data-title="JVM概述" data-url="http://zeng233.github.io/2022/12/10/2023032501JVM%E6%A6%82%E8%BF%B0/"></div>
 </section>
 
 
@@ -229,7 +187,7 @@ public class MyInterceptor implements Interceptor, ApplicationContextAware {
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- 
+ <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#JVM结构"><span class="toc-number">2.</span> <span class="toc-text">JVM结构</span></a></li></ol>
  
   </div>
 
