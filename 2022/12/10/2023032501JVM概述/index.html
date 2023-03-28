@@ -18,7 +18,7 @@
 <meta property="og:site_name" content="DukeZeng">
 <meta property="og:description" content="背景为什么要使用虚拟机？从编程语言的演变发展来看，开关-》二进制-》汇编-》C语言-》C++-》java，经过一层层抽象，为了跨平台，最终形成了虚拟机，其中的发展细节可以参考《编码：隐匿在计算机软硬件背后的语言》。java程序经过编译器编译，生成java字节码，再由java虚拟机加载字节码，最终生成目标代码，用户端源码不用修改就可以跨平台运行。 JVM结构jvm内部结构图：  红色框部分表示线程私">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png">
+<meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/Hotspot_Architecture.jpg">
 <meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM2.jpeg">
 <meta property="og:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM3.png">
 <meta property="article:published_time" content="2022-12-10T13:05:06.000Z">
@@ -26,7 +26,7 @@
 <meta property="article:author" content="竹林闲人">
 <meta property="article:tag" content="jvm">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png">
+<meta name="twitter:image" content="http://zeng233.github.io/images/2023032501JVM%E6%A6%82%E8%BF%B0/Hotspot_Architecture.jpg">
 <meta name="twitter:creator" content="@zeng233">
 <link rel="publisher" href="106512881304692844041">
 
@@ -110,7 +110,7 @@
 		
 		<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>为什么要使用虚拟机？从编程语言的演变发展来看，开关-》二进制-》汇编-》C语言-》C++-》java，经过一层层抽象，为了跨平台，最终形成了虚拟机，其中的发展细节可以参考《编码：隐匿在计算机软硬件背后的语言》。java程序经过编译器编译，生成java字节码，再由java虚拟机加载字节码，最终生成目标代码，用户端源码不用修改就可以跨平台运行。</p>
 <h1 id="JVM结构"><a href="#JVM结构" class="headerlink" title="JVM结构"></a>JVM结构</h1><p>jvm内部结构图：</p>
-<p><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/jvm1.png" alt="jvm内部结构"></p>
+<p><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/Hotspot_Architecture.jpg" alt="jvm内部结构"></p>
 <p>红色框部分表示线程私有变量，method area、heap为线程共享部分。runtime data areas 5块内容介绍：</p>
 <ul>
 <li><p><strong>程序计数器（program counter register）</strong>：JVM每个线程都有自己的PC，通过PC去找到自己的执行方法，线程执行如下图所示：<br><img src="/images/2023032501JVM%E6%A6%82%E8%BF%B0/JVM2.jpeg" alt="线程执行图"></p>
