@@ -79,6 +79,31 @@
     
     
     <entry>
+      <title>为什么使用springboot</title>
+      <link href="/2017/08/28/2023033101%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8springboot/"/>
+      <url>/2017/08/28/2023033101%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8springboot/</url>
+      
+        <content type="html"><![CDATA[<p>其实最早接触springboot是在2013年底的样子，当时所在的一个研发小组就有伙伴分享过，但是也觉得挺麻烦的，各种注解搞得头晕，当时springboot1.0的release版本都没发布，也太鲜了，还有个自己对spring的研究不是特别深入，也就没去调研这个框架了。最近周边同事都在讨论老项目升级springboot，但是还是有些顾虑，一个是考虑现有业务及环境因素，还有个就是springboot把spring再封装一遍，像套娃一样，里面运行的机制是撒，这些没搞明白，其实风险也挺大的。下面就说说自己对springboot的一些看法。</p><p>先了解下springboot的历史，找到创建这个项目的源头思想。最初spring issues里面有个研发提出希望spring能搞出一个<a href="https://github.com/spring-projects/spring-framework/issues/14521" target="_blank" rel="noopener">‘containerless’ web application architectures</a>(就是让研发不用关心servlet容器)，一般我们做web应用都要发布到servlet容器，里面涉及到各种web.xml配置，还要理解ApplicationContext的各种继承关系，以及servlet容器本身的一些配置问题，如果这部分工作交给spring框架去处理，那研发人员就可以减少很多麻烦。最终spring框架没有增加这个功能，而是新搞了一个项目，spring boot就诞生了。引用官方博客<a href="https://spring.io/blog/2013/08/06/spring-boot-simplifying-spring-for-everyone" target="_blank" rel="noopener">Simplifying Spring for Everyone</a>的一张图片：<br><img src="/images/2023033101%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8springboot/springboot.png" alt="spring boot overview"><br>可以看出springboot还会集成spring的所有子模块，达到开箱即用的目的，咱再也不用去配置繁琐的MVC、AOP这些配置了，这就是所谓的约定大于配置吧。</p><p>再说说spring boot的原理，从上面spring boot的发展可以了解到，框架不是独立存在的，需要强依赖spring，如果知道主流程的入口，很多地方就可以迎刃而解了。先看下spring boot入口注解SpringBootApplication：</p><figure class="highlight less"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="variable">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="variable">@Documented</span></span><br><span class="line"><span class="variable">@Inherited</span></span><br><span class="line"><span class="variable">@SpringBootConfiguration</span></span><br><span class="line"><span class="variable">@EnableAutoConfiguration</span></span><br><span class="line"><span class="variable">@ComponentScan</span>(excludeFilters = &#123; <span class="variable">@Filter</span>(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),</span><br><span class="line"><span class="variable">@Filter</span>(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) &#125;)</span><br><span class="line">public <span class="variable">@interface</span> SpringBootApplication &#123;</span><br></pre></td></tr></table></figure><p>好像EnableAutoConfiguration这个注解有点不一样，再看看内部定义：</p><figure class="highlight less"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="variable">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="variable">@Documented</span></span><br><span class="line"><span class="variable">@Inherited</span></span><br><span class="line"><span class="variable">@AutoConfigurationPackage</span></span><br><span class="line"><span class="variable">@Import</span>(AutoConfigurationImportSelector.class)</span><br><span class="line">public <span class="variable">@interface</span> EnableAutoConfiguration &#123;</span><br></pre></td></tr></table></figure><p>Import不就是spring的注解吗，再看看AutoConfigurationImportSelector：</p><figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="symbol">AutoConfigurationImportSelector</span> <span class="symbol">implements</span> <span class="symbol">DeferredImportSelector, <span class="symbol">BeanClassLoaderAware</span>,</span></span><br><span class="line"><span class="symbol">ResourceLoaderAware, <span class="symbol">BeanFactoryAware</span>, <span class="symbol">EnvironmentAware</span>, <span class="symbol">Ordered</span></span> &#123;</span><br></pre></td></tr></table></figure><p>DeferredImportSelector是不是似曾相识的感觉，对就是通过spring的这个注解来集成其他模块的。我们再看下spring通过注解方式加载bean的一个流程：<br><img src="/images/2023033101%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8springboot/spring-configuration.png" alt="spring configuration"><br>我们看到ConfigurationClassParser会统一处理DeferredImportSelector的实现类，这也体现了spring的设计哲学<a href="https://docs.spring.io/spring-framework/docs/current/reference/html/overview.html#overview-philosophy" target="_blank" rel="noopener">Provide choice at every level</a>。</p><p>至此，spring boot的原理以及大概流程就清楚了，其他的功能就写几个demo应该就没撒问题了。如果是新项目那就赶紧换spring boot吧，真的太方便了，老项目就根据实际情况调整吧，总的来说spring boot还是沿用了spring最初的一些设计哲学，这里还是要强烈推荐下spring作者Rod Johnson写的这本书<a href="https://book.douban.com/subject/1483761/" target="_blank" rel="noopener">《Expert One-on-One J2EE Design and Development》</a>，介绍了spring诞生前的一些设计思想，虽然过去了10多年，但这些编程思想并不过时。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> spring文集 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> spring,springboot </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>zookeeper集群启动分析</title>
       <link href="/2016/12/10/7.1zookeeper%E9%9B%86%E7%BE%A4%E5%90%AF%E5%8A%A8%E5%88%86%E6%9E%90/"/>
       <url>/2016/12/10/7.1zookeeper%E9%9B%86%E7%BE%A4%E5%90%AF%E5%8A%A8%E5%88%86%E6%9E%90/</url>
