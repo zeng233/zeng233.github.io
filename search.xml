@@ -79,6 +79,31 @@
     
     
     <entry>
+      <title>springcloud概览</title>
+      <link href="/2022/01/01/2023033102springcloud%E6%A6%82%E8%A7%88/"/>
+      <url>/2022/01/01/2023033102springcloud%E6%A6%82%E8%A7%88/</url>
+      
+        <content type="html"><![CDATA[<p>现在大多数公司技术发展的尽头好像就是云原生，不搞出一堆分布式系统相关东西出来，好像很low。以前听朋友说，他们公司就两研发，老板要搞云原生那套东西，当场笑喷，软件行业的先驱们早验证了一个真理No Silver Bullet：</p><blockquote><p>There is no single development, in either technology or management technique, which by itself promises even one order-of-magnitude improvement within a decade in productivity, in reliability, in simplicity.</p></blockquote><p>耗在技术上的时间成本也许早超出了业务本身，如果公司的业务没有一定规模，微服务、docker、k8什么的还是需谨慎。最近接触了一个项目，相比以往的经历感觉算抽象得比较好的，用到了spring cloud相关的东西，这里就简单做下整理。</p><h1 id="什么是spring-cloud"><a href="#什么是spring-cloud" class="headerlink" title="什么是spring cloud"></a>什么是spring cloud</h1><p>什么是spring cloud，简单说来就是一套服务治理工具集。随着现代技术架构的演进，当时对服务治理这块没有一些API标准，于是与Netflix搞出了这套东西，也沿用了spring的设计哲学，拥抱变化，设计高度抽象的接口：</p><blockquote><ul><li>Accommodate diverse perspectives. Spring embraces flexibility and is not opinionated about how things should be done. It supports a wide range of application needs with different perspectives.Care about API design. The Spring team puts a lot of thought and time into making APIs that are intuitive and that hold up across many versions and many years.</li></ul></blockquote><p>spring cloud主要架构图，如下：<br><img src="/images/2023033102springcloud%E6%A6%82%E8%A7%88/spring-cloud-overview.jpg" alt="spring-cloud-overview"></p><h1 id="spring-cloud组件"><a href="#spring-cloud组件" class="headerlink" title="spring cloud组件"></a>spring cloud组件</h1><p><img src="/images/2023033102springcloud%E6%A6%82%E8%A7%88/spring-cloud-pattern.jpg" alt="spring-cloud-pattern"><br>如上图所示，微服务架构下有非常多的模式，spring cloud提供了一套API标准，也提供了一套服务治理框架，开发者不用关心spring繁琐的配置关系，达到了技术与业务分离的目的。下面列出一些常用服务治理的组件：</p><ul><li>API网关：Spring Cloud Gateway</li><li>配置中心：Spring Cloud Config或者<br>spring-cloud-alibaba-nacos-config</li><li>注册发现：Spring Cloud Netflix Eureka、Spring Cloud Consul、Spring Cloud Zookeeper、spring-cloud-alibaba-nacos-discovery</li><li>负载均衡：Spring Cloud LoadBalancer</li><li>熔断限流：Resilience4j、spring-cloud-alibaba-nacos-sentinel</li><li>链路器：Spring Cloud Sleuth</li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> spring文集 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> springcloud </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>为什么使用springboot</title>
       <link href="/2017/08/28/2023033101%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8springboot/"/>
       <url>/2017/08/28/2023033101%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8springboot/</url>
@@ -95,7 +120,7 @@
       
         <tags>
             
-            <tag> spring,springboot </tag>
+            <tag> springboot </tag>
             
         </tags>
       
