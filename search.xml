@@ -129,6 +129,31 @@
     
     
     <entry>
+      <title>微服务总结</title>
+      <link href="/2018/02/02/2023040301%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%80%BB%E7%BB%93/"/>
+      <url>/2018/02/02/2023040301%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%80%BB%E7%BB%93/</url>
+      
+        <content type="html"><![CDATA[<p>Martin Fowler、James Lewis提出<a href="https://martinfowler.com/articles/microservices.html" target="_blank" rel="noopener">微服务</a>架构之后，最近几年一直火热不减，最近公司也把以前的应用拆成微服务了，下面把拆分过程中的一些思考简单记录下。</p><p>现在国内大部分都是做应用级别的系统，都是围绕业务而生的，软件行业没有银弹，需要根据公司自身的状态（创业期、快速成长期还是稳定期）、公司具体的业务情况以及团队情况因素而做决策。这里先列下单体应用的一些痛点：</p><ul><li>业务复杂度。单体应用随着业务发展，系统变得越来越臃肿，根据单一责任原则，一个系统相似的问题才内聚到一块。</li><li>扩展性差。新增模块会对原有单体系统造成影响，根据开闭原则，新增内容不应该影响到老的系统。</li><li>可靠性差。如果某个模块有死循环整个系统都不可用。</li><li>团队协作开发成本高。以前在一个系统开发，常常听到国骂，谁又改了我的东西，办公室里闹热极了。业务功能复杂的时候，可能相互影响点比较多。</li><li>可伸缩性差。一个系统里面如果有类似秒杀系统这种功能，对服务器的要求更高，有的模块可能没什么高可用要求，需要缩减容器节点。</li><li>线上部署。应用太大之后，构建部署非常耗时间。</li></ul><p>虽然单体应用有这些缺点，但是如果是初创期，需要快速验证业务的可行性，研发人员也只有几个人，单体应用也是可以的，Martin Fowler也说了<a href="https://martinfowler.com/bliki/MonolithFirst.html" target="_blank" rel="noopener">MonolithFirst</a>。相比单体应用，微服务有如下有点：</p><ul><li>灵活性。可以将解耦的服务进行组合和重新安排，达到快速交付的目的</li><li>有弹性。解耦的服务不再是“泥浆球”，某个模块的故障不会导致整个系统瘫痪。</li><li>可伸缩性。可以针对解耦的服务进行不同的集群部署</li></ul><p>当然拆分之后的问题也是非常多的，好在开源社区对服务治理的框架也慢慢成熟起来了，如：服务注册发现、服务限流降级、服务隔离、服务链路追踪、服务监控等等。</p><p>最后还是再说下，没有银弹，微服务并不是统一标准，需要经过详细分析之后，才能决定是否用微服务。</p><p>参考资料：</p><p><a href="https://book.douban.com/subject/25881698/" target="_blank" rel="noopener">《Designing Fine-Grained Systems》</a></p><p><a href="https://book.douban.com/subject/27005082/" target="_blank" rel="noopener">《Spring Microservices in Action》</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 架构 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 微服务 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>为什么使用springboot</title>
       <link href="/2017/08/28/2023033101%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8springboot/"/>
       <url>/2017/08/28/2023033101%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8springboot/</url>
