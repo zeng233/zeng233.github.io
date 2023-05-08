@@ -54,6 +54,31 @@
     
     
     <entry>
+      <title>一次线上CPU100%排查</title>
+      <link href="/2022/11/15/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/"/>
+      <url>/2022/11/15/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/</url>
+      
+        <content type="html"><![CDATA[<p>最近维护一个老系统，收到业务方反馈，一到业务繁忙，系统处理就慢起来了，也没有监控系统监控，只有上服务器先看看，记录下处理步骤：</p><ol><li>使用top查看进程CPU占用率<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/1.png" alt="进程列表"><br>发现使用率较高的进程</li><li>top命令使用线程模式查看具体是哪个线程造成CPU使用率100%<br>top -Hp 9723查询JVM中的线程id<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/2.png" alt="进程对应的线程列表"></li><li>本地线程id转化16进制<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/3.png" alt="线程id转换为16进制"></li><li>查找jstack 9723进程里面线程id为746a的线程栈<br>使用命令jstack 9723|grep -C5 746a，定位到具体代码行数：<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/4.png" alt="线程栈信息"><br>定位到由于死循环造成CPU占用率100%:<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/5.png" alt="问题代码"></li></ol>]]></content>
+      
+      
+      <categories>
+          
+          <category> jvm </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> jvm </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>软件架构的思考</title>
       <link href="/2022/06/06/2023040401%E8%BD%AF%E4%BB%B6%E6%9E%B6%E6%9E%84%E7%9A%84%E6%80%9D%E8%80%83/"/>
       <url>/2022/06/06/2023040401%E8%BD%AF%E4%BB%B6%E6%9E%B6%E6%9E%84%E7%9A%84%E6%80%9D%E8%80%83/</url>

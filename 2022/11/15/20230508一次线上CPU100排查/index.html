@@ -4,25 +4,31 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>JavaScript中的this常见误区 | DukeZeng</title>
+    <title>一次线上CPU100%排查 | DukeZeng</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="竹林闲人">
     
 
     
-    <meta name="description" content="在JavaScript中，this是函数中的一个特殊对象，它表示的是函数执行环境所在的环境对象。函数执行的时候会生成一个执行环境，这个执行环境又会包含在某个对象中，如：直接在脚本中声明一个函数再执行，那么这个环境对象就是window；在一个对象中执行函数，这个环境对象就是当前执行函数所在的对象。下面列出几种常见的陷阱：">
+    <meta name="description" content="最近维护一个老系统，收到业务方反馈，一到业务繁忙，系统处理就慢起来了，也没有监控系统监控，只有上服务器先看看，记录下处理步骤：  使用top查看进程CPU占用率发现使用率较高的进程 top命令使用线程模式查看具体是哪个线程造成CPU使用率100%top -Hp 9723查询JVM中的线程id 本地线程id转化16进制 查找jstack 9723进程里面线程id为746a的线程栈使用命令jstack">
 <meta property="og:type" content="article">
-<meta property="og:title" content="JavaScript中的this常见误区">
-<meta property="og:url" content="http://zeng233.github.io/2016/07/06/5.2JavaScript%E4%B8%AD%E7%9A%84this%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA/index.html">
+<meta property="og:title" content="一次线上CPU100%排查">
+<meta property="og:url" content="http://zeng233.github.io/2022/11/15/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/index.html">
 <meta property="og:site_name" content="DukeZeng">
-<meta property="og:description" content="在JavaScript中，this是函数中的一个特殊对象，它表示的是函数执行环境所在的环境对象。函数执行的时候会生成一个执行环境，这个执行环境又会包含在某个对象中，如：直接在脚本中声明一个函数再执行，那么这个环境对象就是window；在一个对象中执行函数，这个环境对象就是当前执行函数所在的对象。下面列出几种常见的陷阱：">
+<meta property="og:description" content="最近维护一个老系统，收到业务方反馈，一到业务繁忙，系统处理就慢起来了，也没有监控系统监控，只有上服务器先看看，记录下处理步骤：  使用top查看进程CPU占用率发现使用率较高的进程 top命令使用线程模式查看具体是哪个线程造成CPU使用率100%top -Hp 9723查询JVM中的线程id 本地线程id转化16进制 查找jstack 9723进程里面线程id为746a的线程栈使用命令jstack">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2016-07-06T14:30:17.000Z">
-<meta property="article:modified_time" content="2016-03-02T12:57:34.000Z">
+<meta property="og:image" content="http://zeng233.github.io/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/1.png">
+<meta property="og:image" content="http://zeng233.github.io/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/2.png">
+<meta property="og:image" content="http://zeng233.github.io/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/3.png">
+<meta property="og:image" content="http://zeng233.github.io/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/4.png">
+<meta property="og:image" content="http://zeng233.github.io/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/5.png">
+<meta property="article:published_time" content="2022-11-15T13:05:06.000Z">
+<meta property="article:modified_time" content="2022-11-15T13:05:06.000Z">
 <meta property="article:author" content="竹林闲人">
-<meta property="article:tag" content="JavaScript">
+<meta property="article:tag" content="jvm">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://zeng233.github.io/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/1.png">
 <meta name="twitter:creator" content="@zeng233">
 <link rel="publisher" href="106512881304692844041">
 
@@ -84,14 +90,14 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/07/06/5.2JavaScript中的this常见误区/" title="JavaScript中的this常见误区" itemprop="url">JavaScript中的this常见误区</a>
+      <a href="/2022/11/15/20230508一次线上CPU100排查/" title="一次线上CPU100%排查" itemprop="url">一次线上CPU100%排查</a>
   </h1>
   <p class="article-author">By
        
 		<a href="https://plus.google.com/106512881304692844041?rel=author" title="竹林闲人" target="_blank" itemprop="author">竹林闲人</a>
 		
   <p class="article-time">
-    <time datetime="2016-07-06T14:30:17.000Z" itemprop="datePublished"> 发表于 2016-07-06</time>
+    <time datetime="2022-11-15T13:05:06.000Z" itemprop="datePublished"> 发表于 2022-11-15</time>
     
   </p>
 </header>
@@ -100,105 +106,31 @@
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#函数传递中的this"><span class="toc-number">1.</span> <span class="toc-text">函数传递中的this</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#构造函数中的this"><span class="toc-number">2.</span> <span class="toc-text">构造函数中的this</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#闭包中的this"><span class="toc-number">3.</span> <span class="toc-text">闭包中的this</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#HTML事件绑定中的this"><span class="toc-number">4.</span> <span class="toc-text">HTML事件绑定中的this</span></a></li></ol>
+			
 		
 		</div>
 		
-		<p>在JavaScript中，this是函数中的一个特殊对象，它表示的是函数执行环境所在的环境对象。函数执行的时候会生成一个执行环境，这个执行环境又会包含在某个对象中，如：直接在脚本中声明一个函数再执行，那么这个环境对象就是window；在一个对象中执行函数，这个环境对象就是当前执行函数所在的对象。下面列出几种常见的陷阱：</p>
-<a id="more"></a>
-<!-- --- -->
-
-<h1 id="函数传递中的this"><a href="#函数传递中的this" class="headerlink" title="函数传递中的this"></a>函数传递中的this</h1><pre><code>var name = &quot;The Window&quot;;
-    var object = {
-        name : &quot;My Object&quot;,
-        getName: function(){
-        return this.name;
-    }
-};
-(object.getName = object.getName)(); //&quot;The Window&quot;</code></pre><p>打印出来的结果是”The Window”，也许有点奇怪，但是按照上面的思路来分析，其实很简单，object.getName引用传递给本身，然后匿名函数在window环境中执行，上面的代码可以转换为：</p>
-<pre><code>var name = &quot;The Window&quot;;
-    var object = {
-        name : &quot;My Object&quot;,
-        getName: function(){
-        return this.name;
-    }
-};
-
-object.getName = object.getName;
-var temp = object.getName;
-temp();//输出The Window</code></pre><p>这样转换之后就很清楚的看到，最后匿名函数的执行环境其实包含在window对象中的，所以输出的是The Window。</p>
-<h1 id="构造函数中的this"><a href="#构造函数中的this" class="headerlink" title="构造函数中的this"></a>构造函数中的this</h1><pre><code>var name = &apos;global&apos;;
-function Person() {
-    var name = &apos;local&apos;;
-    console.log(this.name);
-}
-Person();//输出global
-new Person();//输出undefined</code></pre><p>如代码所示，第一次执行表示正常的函数执行，输出global没问题，第二个就纳闷了，怎么是undefined？new Person()是构造函数方式创建对象，有点特殊性，可以参考前面的《理解JavaScript原型模式》，可以这样理解，当执行new Person时会分配一个Person实例的内存空间，加上括号就执行Person构造函数，这时Person构造函数所属的对象就是新建的实例对象，而这个实例对象里面什么都没有，所以输出undefined了，如果想要输出属性值，就得给实例赋值，如：this.name=’local’赋值之后，创建的实例就可以输出local了。</p>
-<h1 id="闭包中的this"><a href="#闭包中的this" class="headerlink" title="闭包中的this"></a>闭包中的this</h1><p>同样是上面的例子，直接把getName函数的返回值改成一个匿名函数：</p>
-<pre><code>var name = &quot;The Window&quot;;
-var object = {
-    name : &quot;My Object&quot;,
-    getName: function(){
-        return function(innerName) {
-            console.log(this.name);//输出The Window
-        };
-    }
-};
-object.getName()(&apos;inner&apos;);</code></pre><p>如果不小心，单从object去分析就很容易出错，object.getName()(‘inner’)这段代码其实也是window对象中的一个匿名函数的执行，等价于：</p>
-<pre><code>var temp = object.getName();//获得返回的匿名函数
-temp(&apos;inner&apos;);</code></pre><p>这样可以看到temp就是一个闭包，执行环境是在window对象中执行，所以this就是当前window全局变量了。</p>
-<p>有时候在命名自己的私有空间时，也常常会用到闭包，下面再来一个闭包场景下的this：</p>
-<pre><code>var name=&apos;global&apos;;
-var Global = (function() {
-    var name = &apos;local&apos;;
-
-    var getName = function() {
-        console.log(this.name);
-    }
-
-    return {
-        name : &apos;obj&apos;,
-        objGetName : getName
-    }
-})();
-Global.objGetName();//输出obj</code></pre><p>上面代码可以看出有3个name，看上去输出哪个name有点晕乎，前面说了只要记住函数执行环境所在的对象，不管嵌套多少个函数，其实分析起来都很简单的。这里我们看到会最先执行匿名函数，然后把返回的一个匿名对象赋值给Global对象，在返回对象中getName赋值给了objGetName，执行objGetName函数所在对象是Global，里面的this对象其实就变成了返回的匿名对象了，所以this.name表示的就是匿名对象中的name了。</p>
-<h1 id="HTML事件绑定中的this"><a href="#HTML事件绑定中的this" class="headerlink" title="HTML事件绑定中的this"></a>HTML事件绑定中的this</h1><p>HTML元素其实都是一个对象，里面的各种事件就是函数，事件里面执行函数就相当于一个闭包，拿个例子来说：</p>
-<pre><code>&lt;input type=&quot;text&quot; id=&quot;nameInput&quot; onclick=&quot;this.value = 2&quot;/&gt;
-
-var nameInput = document.getElementById(&apos;nameInput&apos;);
-console.log(nameInput.onclick);//onclick属性是一个函数</code></pre><p>执行onclick事件时，执行函数环境就包含在input标签对象中了，所以事件中的this表示的就是input对象了。<br>如果onclick事件中嵌套一个函数，那这个函数中的this还是input对象么？</p>
-<pre><code>&lt;input type=&quot;text&quot; id=&quot;nameInput&quot; onclick=&quot;doAction()&quot;/&gt;&lt;br&gt;
-
-function doAction() {
-    var nameInput = document.getElementById(&apos;nameInput&apos;);
-    console.log(nameInput.onclick);//onclick属性是一个函数
-    console.log(this);//输出window对象
-    this.value = Math.random();
-}</code></pre><p>意料之中输出的是window对象，最简单粗暴的理解方式就是最后执行doAction函数所在对象是在window对象中，所以不用管onclick到底所属对象。可以换一种写法：</p>
-<pre><code>function doAction() {
-    console.log(this);//输出window对象
-}
-
-function onclick() {
-    doAction();
-}
-
-var nameInput = document.getElementById(&apos;nameInput&apos;);
-nameInput.onclick();</code></pre><p>这样就可以更直观的看到其实就是一般的函数之间的调用了。如果想用onclick所在的html元素对象，就执行函数里面添加一个this参数就可以了，如：</p>
-<pre><code>&lt;input type=&quot;text&quot; id=&quot;nameInput&quot; onclick=&quot;doAction(this)&quot;/&gt;&lt;br&gt;</code></pre>  
+		<p>最近维护一个老系统，收到业务方反馈，一到业务繁忙，系统处理就慢起来了，也没有监控系统监控，只有上服务器先看看，记录下处理步骤：</p>
+<ol>
+<li>使用top查看进程CPU占用率<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/1.png" alt="进程列表"><br>发现使用率较高的进程</li>
+<li>top命令使用线程模式查看具体是哪个线程造成CPU使用率100%<br>top -Hp 9723查询JVM中的线程id<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/2.png" alt="进程对应的线程列表"></li>
+<li>本地线程id转化16进制<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/3.png" alt="线程id转换为16进制"></li>
+<li>查找jstack 9723进程里面线程id为746a的线程栈<br>使用命令jstack 9723|grep -C5 746a，定位到具体代码行数：<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/4.png" alt="线程栈信息"><br>定位到由于死循环造成CPU占用率100%:<br><img src="/images/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/5.png" alt="问题代码"></li>
+</ol>
+  
 	</div>
 		<footer class="article-footer clearfix">
 <div class="article-catetags">
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/JavaScript/">JavaScript</a>
+  <a class="article-category-link" href="/categories/jvm/">jvm</a>
 </div>
 
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/JavaScript/">JavaScript</a>
+  <span></span> <a href="/tags/jvm/">jvm</a>
   </div>
 
 </div>
@@ -207,7 +139,7 @@ nameInput.onclick();</code></pre><p>这样就可以更直观的看到其实就�
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://zeng233.github.io/2016/07/06/5.2JavaScript%E4%B8%AD%E7%9A%84this%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA/" data-title="JavaScript中的this常见误区 | DukeZeng" data-tsina="2043260800" class="share clearfix">
+	  <div data-url="http://zeng233.github.io/2022/11/15/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/" data-title="一次线上CPU100%排查 | DukeZeng" data-tsina="2043260800" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -221,18 +153,18 @@ nameInput.onclick();</code></pre><p>这样就可以更直观的看到其实就�
 <nav class="article-nav clearfix">
  
  <div class="prev" >
- <a href="/2016/07/07/4.1jQuery插件扩展分析/" title="jQuery插件扩展分析">
+ <a href="/2022/12/10/2023032501JVM概述/" title="JVM概述">
   <strong>上一篇：</strong><br/>
   <span>
-  jQuery插件扩展分析</span>
+  JVM概述</span>
 </a>
 </div>
 
 
 <div class="next">
-<a href="/2016/07/06/5.1理解JavaScript原型模式/"  title="理解JavaScript原型模式">
+<a href="/2022/06/06/2023040401软件架构的思考/"  title="软件架构的思考">
  <strong>下一篇：</strong><br/> 
- <span>理解JavaScript原型模式
+ <span>软件架构的思考
 </span>
 </a>
 </div>
@@ -241,7 +173,7 @@ nameInput.onclick();</code></pre><p>这样就可以更直观的看到其实就�
 
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2016/07/06/5.2JavaScript中的this常见误区/" data-title="JavaScript中的this常见误区" data-url="http://zeng233.github.io/2016/07/06/5.2JavaScript%E4%B8%AD%E7%9A%84this%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA/"></div>
+	<div class="ds-thread" data-thread-key="2022/11/15/20230508一次线上CPU100排查/" data-title="一次线上CPU100%排查" data-url="http://zeng233.github.io/2022/11/15/20230508%E4%B8%80%E6%AC%A1%E7%BA%BF%E4%B8%8ACPU100%E6%8E%92%E6%9F%A5/"></div>
 </section>
 
 
@@ -253,7 +185,7 @@ nameInput.onclick();</code></pre><p>这样就可以更直观的看到其实就�
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#函数传递中的this"><span class="toc-number">1.</span> <span class="toc-text">函数传递中的this</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#构造函数中的this"><span class="toc-number">2.</span> <span class="toc-text">构造函数中的this</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#闭包中的this"><span class="toc-number">3.</span> <span class="toc-text">闭包中的this</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#HTML事件绑定中的this"><span class="toc-number">4.</span> <span class="toc-text">HTML事件绑定中的this</span></a></li></ol>
+ 
  
   </div>
 
